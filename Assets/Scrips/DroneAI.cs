@@ -13,7 +13,9 @@ public class DroneAI : MonoBehaviour
     TerrainManager terrain_manager;
     // ----- /Unity objects -----
 
-    public float desired_speed = 1.0f;      // TODO: Set speed.                     // Desired constant speed of the agents.
+    public float desired_speed = 1.0f;          // TODO: Set speed.                 // Desired constant speed of the agents.
+    public float sensor_length = 10;            // TODO: Play with value.           // Length of the obstacle detecting sensors around an agent.
+    public int sensor_resolution = 30;          // TODO: Play with value.           // Angle resolution in degrees of the obstacle detecting sensors around an agent.
 
     // ----- PD controller parameters -----
     public Vector3 target_velocity;
@@ -63,8 +65,10 @@ public class DroneAI : MonoBehaviour
 
     private void FixedUpdate()
     {
-        // Execute your path here
+        ObstacleSensor();
 
+        // Execute your path here
+        Vector3 target_position = new Vector3(0, 0, 0);                                                 // TODO: Set target pos.
 
         // ----- PD controller -----
         // Keep track of target position and velocity.
@@ -84,7 +88,7 @@ public class DroneAI : MonoBehaviour
         //Debug.DrawLine(transform.position, transform.position + desired_acceleration, Color.black);
 
         //Debug.Log("Steering:" + steering + " Acceleration:" + acceleration);
-        m_Drone.Move(steering, acceleration, acceleration, 0f);
+        //m_Drone.Move(steering, acceleration, acceleration, 0f);
         // ----- /PD controller -----
 
 
@@ -101,7 +105,7 @@ public class DroneAI : MonoBehaviour
     }
 
 
-    public void CollisionAvoidance(List<GameObject> agents, List<Vector3> obstacles)
+    public Vector3 CollisionAvoidance(List<GameObject> agents, List<Vector3> obstacles)
     {
         // Collision avoidance using Hybrid Reciprocal Velocity Obstacles (HRVO).
         // Since the HRVO algorithm is run only on this agent, agent_i corresponds to only this agent.
@@ -130,7 +134,7 @@ public class DroneAI : MonoBehaviour
 
         foreach (GameObject agent_j in agents)                                                                  // Loop over each agent_j.
         {
-            if (agent_i == agent_j)
+            if (this == agent_j)
             {
                 break;                                                                                          // Skip if agent_j is agent_i.
             }
@@ -163,7 +167,7 @@ public class DroneAI : MonoBehaviour
 
         hrvo = false;  // Use agent_i_hrvo_list and agent_i_vo_list.                                            // Construct HRVO*_Ai from every HRVO*_Ai|Aj and VO*_Ai|Oj.
         agent_i_v_pref = GetPreferredVelocity();                                                                // Get the preferred velocity if no other agents would exist.
-        agent_i_v_new = GetNewVelocity();                                                                       // Velocity that is closest to the pref. velocity but without collisions.
+        agent_i_v_new = GetNewVelocity(hrvo, agent_i_v_pref);                                                   // Velocity that is closest to the pref. velocity but without collisions.
 
         return agent_i_v_new;
     }
@@ -214,7 +218,7 @@ public class DroneAI : MonoBehaviour
         // Chooses a new velocity to compute a trajectory toward the goal without collisions with any other agent.
         // Input: HRVO object, preferred velocity vector.
         // Output: velocity vector.
-        Vector3 v_new;
+        Vector3 v_new = new Vector3(0, 0, 0);                                                                       // Default action is to stay still.         TODO: Change this?
         float min_diff = float.MaxValue;
         float diff;
         List<Vector3> permissible_new_velocities = new List<Vector3>();                                             // TODO: Get this from the HRVO object somehow.
@@ -243,6 +247,37 @@ public class DroneAI : MonoBehaviour
         {
             return false;
         }
+    }
+
+
+    public List<Vector3> ObstacleSensor()
+    {
+        // Checks for obstacles around this agent given a sensor length and resolution angle (initialized as instance variables).
+        // Output: list of obstacle positions.
+        sensor_length = 30;                                                                                                 // TODO: why are not the instance variables working?
+        sensor_resolution = 20;
+        Vector3 my_position = m_Drone.transform.position;
+        Vector3 sensor_direction = my_position + new Vector3(0, 0, sensor_length);
+        RaycastHit hit;
+        List<Vector3> obstacles = new List<Vector3>();
+
+        //my_position.z = 1.5f;                                                                                           // Raise the Raycast to not detect cars and only walls.
+        //sensor_direction.z = 1.5f;
+        for (int angle = 0; angle < 360; angle += sensor_resolution)
+        {
+            sensor_direction = Quaternion.Euler(0, angle, 0) * (sensor_direction - my_position) + my_position;              // TODO: ####### FIX PROBLEM ###########################
+            //sensor_direction = Quaternion.Euler(0, angle, 0) * sensor_direction + my_position;
+            if (Physics.Raycast(my_position, sensor_direction, out hit, sensor_length))
+            {
+                obstacles.Add(hit.point);
+                Debug.DrawLine(my_position, hit.point, Color.red, 0);
+            }
+            else
+            {
+                Debug.DrawLine(my_position, sensor_direction, Color.green, 0);
+            }
+        }
+        return obstacles;
     }
 
 

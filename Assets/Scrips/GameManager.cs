@@ -73,7 +73,6 @@ public class GameManager : MonoBehaviour {
             }
             if (new_car.tag == "Drone")
             {
-                Debug.Log("stuff");
                 DroneAI new_AI;
                 new_AI = new_car.GetComponent<DroneAI>();
                 new_AI.my_goal_object = goal_sphere;
