@@ -250,7 +250,7 @@ public class DroneAI : MonoBehaviour
     }
 
 
-    public List<Vector3> ObstacleSensor()
+    public List<Vector3> ObstacleSensorOld()
     {
         // Checks for obstacles around this agent given a sensor length and resolution angle (initialized as instance variables).
         // Output: list of obstacle positions.
@@ -277,6 +277,34 @@ public class DroneAI : MonoBehaviour
                 Debug.DrawLine(my_position, sensor_direction, Color.green, 0);
             }
         }
+        return obstacles;
+    }
+
+
+    public List<Vector3> ObstacleSensor()
+    {
+        // Efficiently checks for obstacles around this agent given a sensor length (initialized as instance variables).
+        // Output: list of obstacle positions.
+        sensor_length = 10;                                                                                                 // TODO: why are not the instance variables working?
+        Vector3 my_position = m_Drone.transform.position;
+        List<Vector3> obstacles = new List<Vector3>();
+
+        Collider[] hit_colliders = Physics.OverlapSphere(my_position, sensor_length);
+        foreach (var hit_collider in hit_colliders)
+        {
+            MeshFilter mf = (MeshFilter) hit_collider.gameObject.GetComponent<MeshFilter>();
+            if (mf)
+            {
+                Mesh mesh = mf.mesh;
+                if (mesh.name == "Cube" || mesh.name == "Cube Instance")
+                {
+                    obstacles.Add(hit_collider.gameObject.transform.position);
+                    //Debug.DrawLine(my_position, hit_collider.gameObject.transform.position, Color.red, 0);
+                    //Debug.Log("Wall detected, size: " + mesh.bounds.size);
+                }
+            }
+        }
+
         return obstacles;
     }
 
