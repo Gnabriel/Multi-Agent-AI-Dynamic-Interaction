@@ -58,7 +58,7 @@ public class DroneAI : MonoBehaviour
             old_wp = wp;
         }
 
-        
+        Debug.Log("Start() finished.");
     }
 
 
