@@ -262,6 +262,29 @@ public class DroneAI : MonoBehaviour
         return new VO(rvito.distance, rvito.left_boundary, rvito.right_boundary, new_origin);
     }
 
+    bool contained_in_vo(Vector3 point, List<VO> hrvo_list, List<VO> vo_list) {
+        foreach (VO hrvito in hrvo_list) {
+            Vector3 new_point = point - hrvito.origin;
+            if (new_point.magnitude > 30) {
+                continue;
+            }
+            if (contained_in_angle(hrvito.left_boundary, hrvito.right_boundary, (float) Math.Atan2(new_point.z, new_point.x))) {
+                return true;
+            }
+        }
+        foreach (VO vito in vo_list) {
+            Vector3 new_point = point - vito.origin;
+            if (new_point.magnitude > 30) {
+                continue;
+            }
+            if (contained_in_angle(vito.left_boundary, vito.right_boundary, (float) Math.Atan2(new_point.z, new_point.x))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
     // Angles in radians
     bool contained_in_angle(float left_boundary, float right_boundary, float angle) {
         
