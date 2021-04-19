@@ -6,7 +6,7 @@ using UnityEngine;
 public class DroneAI : MonoBehaviour
 {
     // ----- Debugging -----
-    private ENABLE_DEBUG = false;
+    private bool ENABLE_DEBUG = false;
     // ----- /Debugging -----
 
     // ----- Misc -----
