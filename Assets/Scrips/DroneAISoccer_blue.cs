@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using Panda;
 
 
 
@@ -22,12 +23,16 @@ public class DroneAISoccer_blue : MonoBehaviour
     public GameObject other_goal;
     public GameObject ball;
 
+    PandaBehaviour myPandaBT;
+
     public float dist;
     public float maxKickSpeed = 40f;
     public float lastKickTime = 0f;
 
     private void Start()
     {
+        myPandaBT = GetComponent<PandaBehaviour>();
+
         // get the car controller
         m_Drone = GetComponent<DroneController>();
         terrain_manager = terrain_manager_game_object.GetComponent<TerrainManager>();
@@ -58,6 +63,7 @@ public class DroneAISoccer_blue : MonoBehaviour
         return dist < 7f && (Time.time - lastKickTime) > 0.5f;
     }
 
+
     private void KickBall(Vector3 velocity)
     {
         // impulse to ball object in direction away from agent
@@ -68,12 +74,15 @@ public class DroneAISoccer_blue : MonoBehaviour
             rb.AddForce(velocity, ForceMode.VelocityChange);
             lastKickTime = Time.time;
             print("ball was kicked ");
-
         }
-
     }
 
 
+    [Task]
+    bool IsBallCloserThan(float distance)
+    {
+        return false;
+    }
 
 
 
@@ -128,7 +137,13 @@ public class DroneAISoccer_blue : MonoBehaviour
         {
             KickBall(maxKickSpeed * kickDirection);
         }
+    }
 
+
+    private void Update()
+    {
+        myPandaBT.Reset();
+        myPandaBT.Tick();
     }
 }
 
