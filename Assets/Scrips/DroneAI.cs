@@ -5,6 +5,16 @@ using UnityEngine;
 [RequireComponent(typeof(DroneController))]
 public class DroneAI : MonoBehaviour
 {
+    // ----- Debugging -----
+    private ENABLE_DEBUG = false;
+    // ----- /Debugging -----
+
+    // ----- Misc -----
+    public float desired_speed = 1.0f;          // TODO: Set speed.                 // Desired constant speed of the agents.
+    public float sensor_length = 10f;           // TODO: Play with value.           // Length of the obstacle detecting sensors around an agent.
+    public int sensor_resolution = 30;          // TODO: Play with value.           // Angle resolution in degrees of the obstacle detecting sensors around an agent.
+    // ----- /Misc -----
+
     // ----- Unity objects -----
     private DroneController m_Drone;
     Rigidbody my_rigidbody;
@@ -13,17 +23,13 @@ public class DroneAI : MonoBehaviour
     TerrainManager terrain_manager;
     // ----- /Unity objects -----
 
-    public float desired_speed = 1.0f;          // TODO: Set speed.                 // Desired constant speed of the agents.
-    public float sensor_length = 10;            // TODO: Play with value.           // Length of the obstacle detecting sensors around an agent.
-    public int sensor_resolution = 30;          // TODO: Play with value.           // Angle resolution in degrees of the obstacle detecting sensors around an agent.
-
-    // ----- PD controller parameters -----
+    // ----- PD controller -----
     public Vector3 target_velocity;
     public Vector3 old_target_pos;
     public Vector3 desired_velocity;
     public float k_p = 2f;                                                          // TODO: Current k_p and k_d are for the car. Probably needs to be updated.
     public float k_d = 0.5f;
-    // ----- /PD controller parameters -----
+    // ----- /PD controller -----
 
 
     private void Start()
@@ -68,7 +74,7 @@ public class DroneAI : MonoBehaviour
         ObstacleSensor();
 
         // Execute your path here
-        Vector3 target_position = new Vector3(0, 0, 0);                                                 // TODO: Set target pos.
+        Vector3 target_position = new Vector3(0, 0, 0);                                                 // TODO: Set target pos from A*.
 
         // ----- PD controller -----
         // Keep track of target position and velocity.
@@ -221,7 +227,7 @@ public class DroneAI : MonoBehaviour
         Vector3 v_new = new Vector3(0, 0, 0);                                                                       // Default action is to stay still.         TODO: Change this?
         float min_diff = float.MaxValue;
         float diff;
-        List<Vector3> permissible_new_velocities = new List<Vector3>();                                             // TODO: Get this from the HRVO object somehow.
+        List<Vector3> permissible_new_velocities = new List<Vector3>();                                             // TODO: Get this from the HRVO object (ClearPath).
         foreach (Vector3 v in permissible_new_velocities)
         {
             diff = (v - v_pref).sqrMagnitude;                                                                       // TODO: Do they mean squared in the paper? (they write sub 2)
@@ -254,8 +260,8 @@ public class DroneAI : MonoBehaviour
     {
         // Checks for obstacles around this agent given a sensor length and resolution angle (initialized as instance variables).
         // Output: list of obstacle positions.
-        sensor_length = 30;                                                                                                 // TODO: why are not the instance variables working?
-        sensor_resolution = 20;
+        //sensor_length = 30;
+        //sensor_resolution = 20;
         Vector3 my_position = m_Drone.transform.position;
         Vector3 sensor_direction = my_position + new Vector3(0, 0, sensor_length);
         RaycastHit hit;
@@ -265,7 +271,7 @@ public class DroneAI : MonoBehaviour
         //sensor_direction.z = 1.5f;
         for (int angle = 0; angle < 360; angle += sensor_resolution)
         {
-            sensor_direction = Quaternion.Euler(0, angle, 0) * (sensor_direction - my_position) + my_position;              // TODO: ####### FIX PROBLEM ###########################
+            sensor_direction = Quaternion.Euler(0, angle, 0) * (sensor_direction - my_position) + my_position;
             //sensor_direction = Quaternion.Euler(0, angle, 0) * sensor_direction + my_position;
             if (Physics.Raycast(my_position, sensor_direction, out hit, sensor_length))
             {
@@ -285,7 +291,6 @@ public class DroneAI : MonoBehaviour
     {
         // Efficiently checks for obstacles around this agent given a sensor length (initialized as instance variables).
         // Output: list of obstacle positions.
-        sensor_length = 10;                                                                                                 // TODO: why are not the instance variables working?
         Vector3 my_position = m_Drone.transform.position;
         List<Vector3> obstacles = new List<Vector3>();
 
@@ -299,12 +304,14 @@ public class DroneAI : MonoBehaviour
                 if (mesh.name == "Cube" || mesh.name == "Cube Instance")
                 {
                     obstacles.Add(hit_collider.gameObject.transform.position);
-                    //Debug.DrawLine(my_position, hit_collider.gameObject.transform.position, Color.red, 0);
-                    //Debug.Log("Wall detected, size: " + mesh.bounds.size);
+                    if (ENABLE_DEBUG)
+                    {
+                        Debug.DrawLine(my_position, hit_collider.gameObject.transform.position, Color.red, 0);
+                        Debug.Log("Wall detected, size: " + mesh.bounds.size);
+                    }
                 }
             }
         }
-
         return obstacles;
     }
 
