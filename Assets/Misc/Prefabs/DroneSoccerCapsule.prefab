@@ -55,6 +55,7 @@ MeshRenderer:
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -107,6 +108,7 @@ GameObject:
   - component: {fileID: 1478294031488993880}
   - component: {fileID: 8014876455529319980}
   - component: {fileID: 9045083799023390431}
+  - component: {fileID: 5186965872562180400}
   m_Layer: 0
   m_Name: DroneSoccerCapsule
   m_TagString: Drone
@@ -193,6 +195,9 @@ MonoBehaviour:
   own_goal: {fileID: 0}
   other_goal: {fileID: 0}
   ball: {fileID: 0}
+  dist: 0
+  maxKickSpeed: 40
+  lastKickTime: 0
 --- !u!114 &9045083799023390431
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -213,3 +218,28 @@ MonoBehaviour:
   own_goal: {fileID: 0}
   other_goal: {fileID: 0}
   ball: {fileID: 0}
+  dist: 0
+  maxKickSpeed: 40
+  lastKickTime: 0
+--- !u!114 &5186965872562180400
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1478294031488993887}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17e43e7170fb45b4b81dcd16d0ff55d9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  scripts:
+  - {fileID: 4900000, guid: 31e26c620525ec6469be3b248b81a8c7, type: 3}
+  autoReset: 1
+  tickOn: 3
+  sourceInfos:
+  - isFoldout: 1
+    breakPoints: 
+    breakPointStatuses: 
+    collapsedLines: 
+    btScript: 
