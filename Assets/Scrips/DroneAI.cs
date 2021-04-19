@@ -228,10 +228,10 @@ public class DroneAI : MonoBehaviour
         List<VO> vo_combined_list = hrvo_list.Concat(vo_list);
         VO vo1;
         VO vo2;
-        (float, float) (vo1_line1_m, vo1_line1_b);
-        (float, float) (vo1_line2_m, vo1_line2_b);
-        (float, float) (vo2_line1_m, vo2_line1_b);
-        (float, float) (vo2_line2_m, vo2_line2_b);
+        (float, float) (vo1_line1_m, vo1_line1_b);                                                                  // Left line spanning Velocity Obstacle 1.
+        (float, float) (vo1_line2_m, vo1_line2_b);                                                                  // Right line spanning Velocity Obstacle 1.
+        (float, float) (vo2_line1_m, vo2_line1_b);                                                                  // Left line spanning Velocity Obstacle 2.
+        (float, float) (vo2_line2_m, vo2_line2_b);                                                                  // Right line spanning Velocity Obstacle 2.
         for (int i = 0; i < vo_combined_list.Count; i++)
         {
             vo1 = vo_combined_list[i];
@@ -255,8 +255,8 @@ public class DroneAI : MonoBehaviour
                 }
             }
             // Add projections of the preferred velocity vector onto VO1's left and right line.
-            permissible_velocities.Add(Vector3.Project(v_pref, new Vector3(1f, 0f, vo1_line1_m)));
-            permissible_velocities.Add(Vector3.Project(v_pref, new Vector3(1f, 0f, vo1_line2_m)));
+            permissible_velocities.Add(Vector3.Project(v_pref, new Vector3(1f, 0f, vo1_line1_m)) + my_position);
+            permissible_velocities.Add(Vector3.Project(v_pref, new Vector3(1f, 0f, vo1_line2_m)) + my_position);
         }
         return permissible_velocities;
     }
