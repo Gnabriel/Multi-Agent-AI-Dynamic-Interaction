@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 [RequireComponent(typeof(DroneController))]
 public class DroneAI : MonoBehaviour
@@ -107,7 +108,7 @@ public class DroneAI : MonoBehaviour
     }
 
 
-    public Vector3 CollisionAvoidance(List<GameObject> agents, List<Vector3> obstacles, Vector3 destination)
+    public Vector3 CollisionAvoidance(GameObject[] agents, List<Vector3> obstacles, Vector3 destination)
     {
         // Collision avoidance using Hybrid Reciprocal Velocity Obstacles (HRVO).
         // Since the HRVO algorithm is run only on this agent, agent_i corresponds to only this agent.
@@ -153,7 +154,7 @@ public class DroneAI : MonoBehaviour
         {
             Vector3 obstacle_j_vel = new Vector3(0, 0, 0);                                                      // We only have static obstacles, i.e velocity zero.
             vo = VelocityObstacle(agent_i_pos, agent_i_v, obstacle_j_pos, obstacle_j_vel);                      // Construct VO_Ai|Oj.
-            vo = VelocityObstacleStar(vo);                                                                      // Construct VO*_Ai|Oj.
+            //vo = VelocityObstacleStar(vo);                                                                      // Construct VO*_Ai|Oj.       // TODO: Do anything with this?
             agent_i_vo_list.Add(vo);                                                                            // Save the VO*_Ai|Oj in a list for this agent_i. 
         }
 
@@ -326,10 +327,11 @@ public class DroneAI : MonoBehaviour
         // Helper function to GetNewVelocity(). Computes possible new velocities. Substitute for the ClearPath algorithm.
         // Output: list of velocity vectors.
         Vector3 my_position = this.transform.position;
-        Vector3 permissible_velocity;
-        List<Vector3> new_velocities;
-        List<Vector3> permissible_velocities;
-        List<VO> vo_combined_list = hrvo_list.Concat(vo_list);
+        List<Vector3> new_velocities;                                                                               // New velocities
+        List<Vector3> permissible_velocities = new List<Vector3>();
+        List<VO> vo_combined_list = new List<VO>();
+        vo_combined_list.AddRange(hrvo_list);
+        vo_combined_list.AddRange(vo_list);
         VO vo1;
         VO vo2;
         float vo1_line1_m; float vo1_line1_b;                                                                  // Left line spanning Velocity Obstacle 1.
