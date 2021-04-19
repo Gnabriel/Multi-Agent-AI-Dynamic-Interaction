@@ -13,6 +13,7 @@ public class DroneAI : MonoBehaviour
     public float desired_speed = 1.0f;          // TODO: Set speed.                 // Desired constant speed of the agents.
     public float sensor_length = 10f;           // TODO: Play with value.           // Length of the obstacle detecting sensors around an agent.
     public int sensor_resolution = 30;          // TODO: Play with value.           // Angle resolution in degrees of the obstacle detecting sensors around an agent.
+    public float vo_length = 30f;
     public Map map;
     private const float grid_size = 7.5f;
     List<Vector3> my_path;
@@ -262,10 +263,11 @@ public class DroneAI : MonoBehaviour
         return new VO(rvito.distance, rvito.left_boundary, rvito.right_boundary, new_origin);
     }
 
+
     bool contained_in_vo(Vector3 point, List<VO> hrvo_list, List<VO> vo_list) {
         foreach (VO hrvito in hrvo_list) {
             Vector3 new_point = point - hrvito.origin;
-            if (new_point.magnitude > 30) {
+            if (new_point.magnitude > vo_length) {
                 continue;
             }
             if (contained_in_angle(hrvito.left_boundary, hrvito.right_boundary, (float) Math.Atan2(new_point.z, new_point.x))) {
@@ -274,7 +276,7 @@ public class DroneAI : MonoBehaviour
         }
         foreach (VO vito in vo_list) {
             Vector3 new_point = point - vito.origin;
-            if (new_point.magnitude > 30) {
+            if (new_point.magnitude > vo_length) {
                 continue;
             }
             if (contained_in_angle(vito.left_boundary, vito.right_boundary, (float) Math.Atan2(new_point.z, new_point.x))) {
@@ -324,6 +326,8 @@ public class DroneAI : MonoBehaviour
         // Helper function to GetNewVelocity(). Computes possible new velocities. Substitute for the ClearPath algorithm.
         // Output: list of velocity vectors.
         Vector3 my_position = this.transform.position;
+        Vector3 permissible_velocity;
+        List<Vector3> new_velocities;
         List<Vector3> permissible_velocities;
         List<VO> vo_combined_list = hrvo_list.Concat(vo_list);
         VO vo1;
@@ -337,6 +341,7 @@ public class DroneAI : MonoBehaviour
             vo1 = vo_combined_list[i];
             (vo1_line1_m, vo1_line1_b) = linefromangle(vo1.origin, vo1.left_boundary);                              // Get left line of this velocity obstacle.
             (vo1_line2_m, vo1_line2_b) = linefromangle(vo1.origin, vo1.right_boundary);                             // Get right line of this velocity obstacle.
+            new_velocities = new List<Vector3>();
             for (int j = 0; j < vo_combined_list.Count; j++)
             {
                 if (i != j)
@@ -346,17 +351,25 @@ public class DroneAI : MonoBehaviour
                     (vo2_line2_m, vo2_line2_b) = linefromangle(vo2.origin, vo2.right_boundary);                     // Get right line of other velocity obstacle.
 
                     // Intersections of VO1's left line and VO2.
-                    permissible_velocities.Add(intersection(vo1_line1_m, vo1_line1_b, vo2_line1_m, vo2_line1_b) - my_position);     // TODO: Subtract my_position or not?
-                    permissible_velocities.Add(intersection(vo1_line1_m, vo1_line1_b, vo2_line2_m, vo2_line2_b) - my_position);
+                    new_velocities.Add(intersection(vo1_line1_m, vo1_line1_b, vo2_line1_m, vo2_line1_b) - my_position);     // TODO: Subtract my_position or not?
+                    new_velocities.Add(intersection(vo1_line1_m, vo1_line1_b, vo2_line2_m, vo2_line2_b) - my_position);
 
                     // Intersections of VO1's right line and VO2.
-                    permissible_velocities.Add(intersection(vo1_line2_m, vo1_line2_b, vo2_line1_m, vo2_line1_b) - my_position);
-                    permissible_velocities.Add(intersection(vo1_line2_m, vo1_line2_b, vo2_line2_m, vo2_line2_b) - my_position);
+                    new_velocities.Add(intersection(vo1_line2_m, vo1_line2_b, vo2_line1_m, vo2_line1_b) - my_position);
+                    new_velocities.Add(intersection(vo1_line2_m, vo1_line2_b, vo2_line2_m, vo2_line2_b) - my_position);
                 }
             }
             // Add projections of the preferred velocity vector onto VO1's left and right line.
-            permissible_velocities.Add(Vector3.Project(v_pref, new Vector3(1f, 0f, vo1_line1_m)) + my_position);
-            permissible_velocities.Add(Vector3.Project(v_pref, new Vector3(1f, 0f, vo1_line2_m)) + my_position);
+            new_velocities.Add(Vector3.Project(v_pref, new Vector3(1f, 0f, vo1_line1_m)) + my_position);
+            new_velocities.Add(Vector3.Project(v_pref, new Vector3(1f, 0f, vo1_line2_m)) + my_position);
+
+            foreach (Vector3 velocity in new_velocities)
+            {
+                if (!contained_in_vo(velocity, hrvo_list, vo_list))                                             // Check that the velocities are permissible, ie. not inside a VO.
+                {
+                    permissible_velocities.Add(velocity);
+                }
+            }
         }
         return permissible_velocities;
     }
