@@ -219,7 +219,50 @@ public class DroneAI : MonoBehaviour
     }
 
 
-    public Vector3 GetNewVelocity(bool hrvo, Vector3 v_pref)
+    public List<Vector3> GetPermissibleNewVelocities(List<VO> hrvo_list, List<VO> vo_list, Vector3 v_pref)
+    {
+        // Helper function to GetNewVelocity(). Computes possible new velocities. Substitute for the ClearPath algorithm.
+        // Output: list of velocity vectors.
+        Vector3 my_position = this.transform.position;
+        List<Vector3> permissible_velocities;
+        List<VO> vo_combined_list = hrvo_list.Concat(vo_list);
+        VO vo1;
+        VO vo2;
+        (float, float) (vo1_line1_m, vo1_line1_b);
+        (float, float) (vo1_line2_m, vo1_line2_b);
+        (float, float) (vo2_line1_m, vo2_line1_b);
+        (float, float) (vo2_line2_m, vo2_line2_b);
+        for (int i = 0; i < vo_combined_list.Count; i++)
+        {
+            vo1 = vo_combined_list[i];
+            (vo1_line1_m, vo1_line1_b) = linefromangle(vo1.origin, vo1.left_boundary);                              // Get left line of this velocity obstacle.
+            (vo1_line2_m, vo1_line2_b) = linefromangle(vo1.origin, vo1.right_boundary);                             // Get right line of this velocity obstacle.
+            for (int j = 0; j < vo_combined_list.Count; j++)
+            {
+                if (i != j)
+                {
+                    vo2 = vo_combined_list[j];
+                    (vo2_line1_m, vo2_line1_b) = linefromangle(vo2.origin, vo2.left_boundary);                      // Get left line of other velocity obstacle.
+                    (vo2_line2_m, vo2_line2_b) = linefromangle(vo2.origin, vo2.right_boundary);                     // Get right line of other velocity obstacle.
+
+                    // Intersections of VO1's left line and VO2.
+                    permissible_velocities.Add(intersection(vo1_line1_m, vo1_line1_b, vo2_line1_m, vo2_line1_b) - my_position);     // TODO: Subtract my_position or not?
+                    permissible_velocities.Add(intersection(vo1_line1_m, vo1_line1_b, vo2_line2_m, vo2_line2_b) - my_position);
+
+                    // Intersections of VO1's right line and VO2.
+                    permissible_velocities.Add(intersection(vo1_line2_m, vo1_line2_b, vo2_line1_m, vo2_line1_b) - my_position);
+                    permissible_velocities.Add(intersection(vo1_line2_m, vo1_line2_b, vo2_line2_m, vo2_line2_b) - my_position);
+                }
+            }
+            // Add projections of the preferred velocity vector onto VO1's left and right line.
+            permissible_velocities.Add(Vector3.Project(v_pref, new Vector3(1f, 0f, vo1_line1_m)));
+            permissible_velocities.Add(Vector3.Project(v_pref, new Vector3(1f, 0f, vo1_line2_m)));
+        }
+        return permissible_velocities;
+    }
+
+
+    public Vector3 GetNewVelocity(List<VO> hrvo_list, List<VO> vo_list, Vector3 v_pref)
     {
         // Chooses a new velocity to compute a trajectory toward the goal without collisions with any other agent.
         // Input: HRVO object, preferred velocity vector.
@@ -227,7 +270,7 @@ public class DroneAI : MonoBehaviour
         Vector3 v_new = new Vector3(0, 0, 0);                                                                       // Default action is to stay still.         TODO: Change this?
         float min_diff = float.MaxValue;
         float diff;
-        List<Vector3> permissible_new_velocities = new List<Vector3>();                                             // TODO: Get this from the HRVO object (ClearPath).
+        List<Vector3> permissible_new_velocities = GetPermissibleNewVelocities(hrvo_list, vo_list, v_pref);
         foreach (Vector3 v in permissible_new_velocities)
         {
             diff = (v - v_pref).sqrMagnitude;                                                                       // TODO: Do they mean squared in the paper? (they write sub 2)
