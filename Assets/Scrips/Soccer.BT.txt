@@ -1,2 +1,33 @@
 tree("Root")
-	Succeed
+	fallback
+		sequence
+			IsGoalkeeper
+			tree("Goalkeeper")
+		sequence
+			IsChaser
+			tree("Forward")
+		tree("Midfielder")
+
+
+tree("Goalkeeper")
+	fallback
+		Defend 0.3
+	
+
+tree("Forward")
+	fallback
+		sequence
+			TeammatesHaveBall
+			GoFishing
+		sequence
+			IsBallCloserThan 10.0
+			Dribble
+		InterceptBall
+
+
+tree("Midfielder")
+	fallback
+		sequence
+			TeammatesHaveBall
+			GoCenter
+		InterceptBall

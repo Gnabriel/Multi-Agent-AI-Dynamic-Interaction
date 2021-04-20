@@ -157,16 +157,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 175b5c7d166df4e7aa3c053a48f8af36, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  friends: []
+  agents: []
+  obstacles: []
   my_goal_object: {fileID: 0}
   terrain_manager_game_object: {fileID: 0}
-  desired_speed: 1
-  sensor_length: 50
-  sensor_resolution: 30
-  target_velocity: {x: 0, y: 0, z: 0}
-  old_target_pos: {x: 0, y: 0, z: 0}
-  desired_velocity: {x: 0, y: 0, z: 0}
-  k_p: 2
-  k_d: 0.5
 --- !u!114 &1478294031488993884
 MonoBehaviour:
   m_ObjectHideFlags: 0

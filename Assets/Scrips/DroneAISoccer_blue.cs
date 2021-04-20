@@ -79,11 +79,62 @@ public class DroneAISoccer_blue : MonoBehaviour
 
 
     [Task]
-    bool IsBallCloserThan(float distance)
+    bool IsGoalkeeper()
     {
         return false;
     }
 
+
+    [Task]
+    bool IsChaser()
+    {
+        return false;
+    }
+
+
+    [Task]
+    bool IsBallCloserThan(float distance)
+    {
+        // Checks if the ball is closer than a certain distance to the agent.
+        return ((ball.transform.position - transform.position).sqrMagnitude < (distance * distance));
+    }
+
+
+    [Task]
+    bool TeammatesHaveBall()
+    {
+        return false;
+    }
+
+
+    [Task]
+    void Defend(float what_the_hell_is_this)
+    {
+    }
+
+
+    [Task]
+    void InterceptBall()
+    {
+    }
+
+
+    [Task]
+    void Dribble()
+    {
+    }
+
+
+    [Task]
+    void GoCenter()
+    {
+    }
+
+
+    [Task]
+    void GoFishing()
+    {
+    }
 
 
     private void FixedUpdate()
