@@ -11,8 +11,8 @@ public class DroneAI : MonoBehaviour
     // ----- /Debugging -----
 
     // ----- Misc -----
-    public static float desired_speed = 1.0f;          // TODO: Set speed.                 // Desired constant speed of the agents.
-    public static float sensor_length = 10f;           // TODO: Play with value.           // Length of the obstacle detecting sensors around an agent.
+    public static float desired_speed = 0.5f;          // TODO: Set speed.                 // Desired constant speed of the agents.
+    public static float sensor_length = 15f;           // TODO: Play with value.           // Length of the obstacle detecting sensors around an agent.
     public static int sensor_resolution = 30;          // TODO: Play with value.           // Angle resolution in degrees of the obstacle detecting sensors around an agent.
     public static float vo_length = 30f;
     public Map map;
@@ -31,14 +31,6 @@ public class DroneAI : MonoBehaviour
     public GameObject terrain_manager_game_object;
     TerrainManager terrain_manager;
     // ----- /Unity objects -----
-
-    // ----- PD controller -----
-    public Vector3 target_velocity;
-    public Vector3 old_target_pos;
-    public Vector3 desired_velocity;
-    public float k_p = 2f;                                                          // TODO: Current k_p and k_d are for the car. Probably needs to be updated.
-    public float k_d = 0.5f;
-    // ----- /PD controller -----
 
 
     private void Start()
@@ -84,28 +76,13 @@ public class DroneAI : MonoBehaviour
         }
         Vector3 new_vel = CollisionAvoidance(agents, obstacles, destination);
         //Vector3 new_vel = new Vector3(0, 0, 0);
+
+        if (ENABLE_DEBUG)
+        {
+            Debug.DrawLine(this.transform.position, this.transform.position + new_vel, Color.magenta, 0);
+        }
+
         m_Drone.Move_vect(new_vel);
-
-        // ----- PD controller -----
-        // Keep track of target position and velocity.
-        // target_velocity = (target_position - old_target_pos) / Time.fixedDeltaTime;
-        // old_target_pos = target_position;
-
-        // // A PD-controller to get desired velocity.
-        // Vector3 position_error = target_position - transform.position;
-        // Vector3 velocity_error = target_velocity - my_rigidbody.velocity;
-        // Vector3 desired_acceleration = k_p * position_error + k_d * velocity_error;
-
-        // float steering = Vector3.Dot(desired_acceleration, transform.right);
-        // float acceleration = Vector3.Dot(desired_acceleration, transform.forward);
-
-        //Debug.DrawLine(target_position, target_position + target_velocity, Color.red);
-        //Debug.DrawLine(transform.position, transform.position + my_rigidbody.velocity, Color.blue);
-        //Debug.DrawLine(transform.position, transform.position + desired_acceleration, Color.black);
-
-        //Debug.Log("Steering:" + steering + " Acceleration:" + acceleration);
-        //m_Drone.Move(steering, acceleration, acceleration, 0f);
-        // ----- /PD controller -----
     }
 
 
