@@ -122,8 +122,8 @@ public class DroneAI : MonoBehaviour
             agent_j_v = agent_j.GetComponent<Rigidbody>().velocity;
 
             vo = VelocityObstacle(agent_i_pos, agent_i_v, agent_j_pos, agent_j_v);                              // Construct VO_Ai|Aj.
-            rvo = ReciprocalVelocityObstacle(agent_i_pos, agent_i_v, agent_j_pos, agent_j_v);             // Construct RVO_Ai|Aj.
-            hrvo = HybridReciprocalVelocityObstacle(agent_i_v, vo, rvo);                                       // Construct HRVO_Ai|Aj using left edge of VO_Ai|Aj.
+            rvo = ReciprocalVelocityObstacle(agent_i_pos, agent_i_v, agent_j_pos, agent_j_v);                   // Construct RVO_Ai|Aj.
+            hrvo = HybridReciprocalVelocityObstacle(agent_i_v, vo, rvo);                                        // Construct HRVO_Ai|Aj using left edge of VO_Ai|Aj.
             
             agent_i_hrvo_list.Add(hrvo);                                                                        // Save the HRVO*_Ai|Aj in a list for this agent_i. 
         }
@@ -132,12 +132,12 @@ public class DroneAI : MonoBehaviour
         {
             Vector3 obstacle_j_vel = new Vector3(0, 0, 0);                                                      // We only have static obstacles, i.e velocity zero.
             vo = VelocityObstacle(agent_i_pos, agent_i_v, obstacle_j_pos, obstacle_j_vel);                      // Construct VO_Ai|Oj.
-            //vo = VelocityObstacleStar(vo);                                                                      // Construct VO*_Ai|Oj.       // TODO: Do anything with this?
+            //vo = VelocityObstacleStar(vo);                                                                    // Construct VO*_Ai|Oj.       // TODO: Do anything with this?
             agent_i_vo_list.Add(vo);                                                                            // Save the VO*_Ai|Oj in a list for this agent_i. 
         }
 
-        agent_i_v_pref = GetPreferredVelocity();                                                                // Get the preferred velocity if no other agents would exist.
-        agent_i_v_new = GetNewVelocity(agent_i_hrvo_list, agent_i_vo_list, agent_i_v_pref);                                                   // Velocity that is closest to the pref. velocity but without collisions.
+        agent_i_v_pref = GetPreferredVelocity(destination);                                                     // Get the preferred velocity if no other agents would exist.
+        agent_i_v_new = GetNewVelocity(agent_i_hrvo_list, agent_i_vo_list, agent_i_v_pref);                     // Velocity that is closest to the pref. velocity but without collisions.
 
         return agent_i_v_new;
     }
@@ -290,12 +290,11 @@ public class DroneAI : MonoBehaviour
     }
 
 
-    public Vector3 GetPreferredVelocity()
+    public Vector3 GetPreferredVelocity(Vector3 target_pos)
     {
         // Returns the preferred velocity for this agent if no other agents would exist.
         // Output: velocity vector.
         Vector3 current_pos = this.transform.position;
-        Vector3 target_pos = new Vector3(0, 0, 0);                                                                  // TODO: Get this from A*.
         return desired_speed * ((current_pos - target_pos) / (current_pos - target_pos).sqrMagnitude);              // TODO: Do they mean squared in the paper? (they write sub 2)
     }
 
