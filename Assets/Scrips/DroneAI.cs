@@ -7,19 +7,21 @@ using System;
 public class DroneAI : MonoBehaviour
 {
     // ----- Debugging -----
-    private bool ENABLE_DEBUG = false;
+    private bool ENABLE_DEBUG = true;
     // ----- /Debugging -----
 
     // ----- Misc -----
-    public float desired_speed = 1.0f;          // TODO: Set speed.                 // Desired constant speed of the agents.
-    public float sensor_length = 10f;           // TODO: Play with value.           // Length of the obstacle detecting sensors around an agent.
-    public int sensor_resolution = 30;          // TODO: Play with value.           // Angle resolution in degrees of the obstacle detecting sensors around an agent.
-    public float vo_length = 30f;
+    public static float desired_speed = 1.0f;          // TODO: Set speed.                 // Desired constant speed of the agents.
+    public static float sensor_length = 10f;           // TODO: Play with value.           // Length of the obstacle detecting sensors around an agent.
+    public static int sensor_resolution = 30;          // TODO: Play with value.           // Angle resolution in degrees of the obstacle detecting sensors around an agent.
+    public static float vo_length = 30f;
     public Map map;
     private const float grid_size = 7.5f;
     List<Vector3> my_path;
     public GameObject[] friends;
-    public float drone_radius = 1.0f;
+    public List<GameObject> agents;
+    public List<Vector3> obstacles;
+    public static float drone_radius = 1.0f;
     // ----- /Misc -----
 
     // ----- Unity objects -----
@@ -57,14 +59,12 @@ public class DroneAI : MonoBehaviour
             Debug.DrawLine(old_wp, wp, Color.red, 100f);
             old_wp = wp;
         }
-
-        Debug.Log("Start() finished.");
     }
 
 
     private void FixedUpdate()
     {
-        List<Vector3> obstacles = ObstacleSensor();
+        (agents, obstacles) = AgentObstacleSensor();
 
         // Execute your path here
         Vector3 destination = my_path[0];
@@ -82,7 +82,8 @@ public class DroneAI : MonoBehaviour
             // } else {
             // }
         }
-        Vector3 new_vel = CollisionAvoidance(friends, obstacles, destination);
+        Vector3 new_vel = CollisionAvoidance(agents, obstacles, destination);
+        //Vector3 new_vel = new Vector3(0, 0, 0);
         m_Drone.Move_vect(new_vel);
 
         // ----- PD controller -----
@@ -108,7 +109,7 @@ public class DroneAI : MonoBehaviour
     }
 
 
-    public Vector3 CollisionAvoidance(GameObject[] agents, List<Vector3> obstacles, Vector3 destination)
+    public Vector3 CollisionAvoidance(List<GameObject> agents, List<Vector3> obstacles, Vector3 destination)
     {
         // Collision avoidance using Hybrid Reciprocal Velocity Obstacles (HRVO).
         // Since the HRVO algorithm is run only on this agent, agent_i corresponds to only this agent.
@@ -445,12 +446,13 @@ public class DroneAI : MonoBehaviour
     }
 
 
-    public List<Vector3> ObstacleSensor()
+    public (List<GameObject>, List<Vector3>) AgentObstacleSensor()
     {
-        // Efficiently checks for obstacles around this agent given a sensor length (initialized as instance variables).
-        // Output: list of obstacle positions.
+        // Efficiently checks for agents and obstacles around this agent given a sensor length (initialized as instance variables).
+        // Output: list of agents, list of obstacle positions.
         Vector3 my_position = m_Drone.transform.position;
-        List<Vector3> obstacles = new List<Vector3>();
+        List<GameObject> nearby_agents = new List<GameObject>();
+        List<Vector3> nearby_obstacles = new List<Vector3>();
 
         Collider[] hit_colliders = Physics.OverlapSphere(my_position, sensor_length);
         foreach (var hit_collider in hit_colliders)
@@ -459,18 +461,28 @@ public class DroneAI : MonoBehaviour
             if (mf)
             {
                 Mesh mesh = mf.mesh;
-                if (mesh.name == "Cube" || mesh.name == "Cube Instance")
+                // If the nearby object is an agent (drone), add it to the nearby agents list.
+                if (mesh.name == "Capsule" || mesh.name == "Capsule Instance")
                 {
-                    obstacles.Add(hit_collider.gameObject.transform.position);
+                    //nearby_agents.Add(hit_collider.gameObject);
+                    nearby_agents.Add(hit_collider.gameObject.transform.parent.gameObject);                                         // TODO: Add parent object or not?
+                    if (ENABLE_DEBUG)
+                    {
+                        Debug.DrawLine(my_position, hit_collider.gameObject.transform.position, Color.blue, 0);
+                    }
+                }
+                // If the nearby object is an obstacle (wall cube), add it to the nearby objects list.
+                else if (mesh.name == "Cube" || mesh.name == "Cube Instance")
+                {
+                    nearby_obstacles.Add(hit_collider.gameObject.transform.position);
                     if (ENABLE_DEBUG)
                     {
                         Debug.DrawLine(my_position, hit_collider.gameObject.transform.position, Color.red, 0);
-                        Debug.Log("Wall detected, size: " + mesh.bounds.size);
                     }
                 }
             }
         }
-        return obstacles;
+        return (nearby_agents, nearby_obstacles);
     }
 
 
@@ -588,7 +600,7 @@ public class DroneAI : MonoBehaviour
                 if (return_f == false)
                 {
                     current_node.pos_xz = goal.pos_xz;
-                    Debug.Log("Found Path to Goal");
+                    //Debug.Log("Found Path to Goal");
                     //List<Vector3> final_path = ReconstructPath(current_node);
                     return ReconstructPath(current_node);
                 }
@@ -620,7 +632,7 @@ public class DroneAI : MonoBehaviour
         }
 
         // Return no path found if open set empty OR max iterations reached
-        Debug.Log("FOUND NO PATH");
+        //Debug.Log("FOUND NO PATH");
         return new List<Vector3>();
     }
 
