@@ -78,6 +78,28 @@ public class DroneAISoccer_blue : MonoBehaviour
     }
 
 
+    public void GoToPosition(Vector3 target_position)
+    {
+        // Moves agent toward desired position.
+        m_Drone.Move_vect(target_position - transform.position);
+    }
+
+
+    public float GoalkeeperScore(GameObject agent)
+    {
+        Vector3 own_goal_to_agent = agent.transform.position - own_goal.transform.position;
+        //Vector3 own_goal_to_ball = ball.transform.position - own_goal.transform.position;
+        return -own_goal_to_agent.magnitude;
+    }
+
+
+    public float ForwardScore(GameObject agent)
+    {
+        Vector3 ball_to_agent = agent.transform.position - ball.transform.position;
+        return -ball_to_agent.magnitude;
+    }
+
+
     [Task]
     bool IsGoalkeeper()
     {
@@ -88,6 +110,32 @@ public class DroneAISoccer_blue : MonoBehaviour
     [Task]
     bool IsChaser()
     {
+        float my_chaser_score = ChaserScore(transform.gameObject);
+        float my_goalkeeper_score = GoalkeeperScore(transform.gameObject);
+        float best_chaser_score = float.MinValue;
+        float best_goalkeeper_score = float.MinValue;
+        int i = 0;
+        foreach (GameObject friend in friends)
+        {
+            if (friend != transform.gameObject)                                 // TODO: is this check valid? or check pos?
+            {
+                chaser_score = ChaserScore(friend);
+                goalkeeper_score = GoalkeeperScore(friend);
+                if (chaser_score > best_chaser_score)
+                {
+                    best_chaser_score = chaser_score;
+                }
+                if (goalkeeper_score > best_goalkeeper_score)
+                {
+                    best_goalkeeper_score = goalkeeper_score;
+                }
+            } 
+        }
+        // Check if this agent is the best chaser but at the same time not the best goalkeeper.
+        if (my_chaser_score > best_chaser_score && my_goalkeeper_score <= best_goalkeeper_score)        // TODO: is this right?
+        {
+            return true;
+        }
         return false;
     }
 
@@ -116,6 +164,7 @@ public class DroneAISoccer_blue : MonoBehaviour
     [Task]
     void InterceptBall()
     {
+        Vector3 desired_position;
     }
 
 
