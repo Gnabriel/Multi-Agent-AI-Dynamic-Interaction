@@ -16,6 +16,11 @@ public class DroneAISoccer_blue : MonoBehaviour
     bool currently_fw;
     // ----- /Debugging -----
 
+    // ----- Misc -----
+    int goal_resolution = 10;
+    Vector3[] other_goal_positions;
+    // ----- /Misc -----
+
     private DroneController m_Drone; // the drone controller we want to use
 
     public GameObject terrain_manager_game_object;
@@ -62,8 +67,27 @@ public class DroneAISoccer_blue : MonoBehaviour
         ball = GameObject.FindGameObjectWithTag("Ball");
 
 
-        // Plan your path here
-        // ...
+        // ----- Discretize goal -----
+        other_goal_positions = new Vector3[goal_resolution];
+        Vector3 left_goal_post;
+        Vector3 right_goal_post;
+
+        if (friend_tag == "Blue")
+        {
+            left_goal_post = new Vector3(60, 0, 85);
+            right_goal_post = new Vector3(60, 0, 115);
+        }
+        else
+        {
+            left_goal_post = new Vector3(240, 0, 85);
+            right_goal_post = new Vector3(240, 0, 115);
+        }
+
+        for (int i = 0; i <= goal_resolution; i++)
+        {
+            other_goal_positions[i] = Vector3.Lerp(left_goal_post, right_goal_post, i/goal_resolution);
+        }
+        // ----- Discretize goal ----- 
     }
 
 
@@ -173,7 +197,7 @@ public class DroneAISoccer_blue : MonoBehaviour
         float friend_goalkeeper_score;
         foreach (GameObject friend in friends)
         {
-            if (friend != transform.gameObject)                                                             // TODO: is this check valid? or check pos instead?
+            if (friend != transform.gameObject)
             {
                 friend_forward_score = ForwardScore(friend);
                 friend_goalkeeper_score = GoalkeeperScore(friend);
@@ -187,25 +211,14 @@ public class DroneAISoccer_blue : MonoBehaviour
                 }
             } 
         }
-        // ----- Debugging -----
-        if (TESTING)
-        {
-            if (my_forward_score >= best_forward_score && my_goalkeeper_score <= best_goalkeeper_score)
-            {
-                currently_fw = true;
-            }
-            else
-            {
-                currently_fw = false;
-            }
-        }
-        // ----- /Debugging -----
 
         // Check if this agent is the best chaser but at the same time not the best goalkeeper.
-        if (my_forward_score >= best_forward_score && my_goalkeeper_score <= best_goalkeeper_score)          // TODO: is this right?
+        if (my_forward_score >= best_forward_score && my_goalkeeper_score <= best_goalkeeper_score)
         {
+            currently_fw = true;            // Used for debugging.
             return true;
         }
+        currently_fw = false;               // Used for debugging.
         return false;
     }
 
@@ -234,6 +247,18 @@ public class DroneAISoccer_blue : MonoBehaviour
 
 
     [Task]
+    bool ShootingOpportunity()
+    {
+        // Checks if an agent that already has the ball also has the opportunity to score.
+        foreach (Vector3 goal_position in other_goal_positions)
+        {
+
+        }
+        
+    }
+
+
+    [Task]
     void Defend(float what_to_do_with_this)
     {
         GoToPosition(own_goal.transform.position);
@@ -245,6 +270,12 @@ public class DroneAISoccer_blue : MonoBehaviour
     {
         Vector3 target_position = InterceptTarget(ball, transform.gameObject);
         GoToPosition(target_position);
+    }
+
+
+    [Task]
+    void ShootBall()
+    {
     }
 
 

@@ -20,7 +20,10 @@ tree("Forward")
 			TeammatesHaveBall
 			GoFishing
 		sequence
-			IsBallCloserThan 10.0
+			IsBallCloserThan 7.0
+			sequence
+				ShootingOpportunity
+				ShootBall
 			Dribble
 		InterceptBall
 
