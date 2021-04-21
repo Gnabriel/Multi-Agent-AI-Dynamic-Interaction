@@ -337,7 +337,7 @@ public class DroneAISoccer_blue : MonoBehaviour
                 Debug.DrawLine(ball.transform.position, hit.transform.position, Color.green, 1f);
                 if (CanKick())
                 {
-                    KickBall((maxKickSpeed / 2) * goal_direction);                                            // TODO: Change to not always using maxKickSpeed/2.
+                    KickBall((maxKickSpeed) * goal_direction);                                            // TODO: Change to not always using maxKickSpeed/2.
                     return true;
                 }
             }
@@ -405,7 +405,7 @@ public class DroneAISoccer_blue : MonoBehaviour
         {
             //Debug.DrawLine(transform.position, ball.transform.position, Color.red);
             //KickBall(maxKickSpeed * Vector3.forward);
-            ShootBall();
+            //ShootBall();
         }
 
 

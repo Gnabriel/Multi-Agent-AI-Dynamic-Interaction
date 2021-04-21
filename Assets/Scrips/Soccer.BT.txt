@@ -17,13 +17,13 @@ tree("Goalkeeper")
 tree("Forward")
 	fallback
 		sequence
-			TeammatesHaveBall
-			GoFishing
-		sequence
 			IsBallCloserThan 7.0
 			sequence
 				ShootBall
 			Dribble
+		sequence
+			TeammatesHaveBall
+			GoFishing
 		InterceptBall
 
 
