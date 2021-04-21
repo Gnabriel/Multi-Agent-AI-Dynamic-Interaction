@@ -68,11 +68,11 @@ public class DroneAISoccer_blue : MonoBehaviour
 
 
         // ----- Discretize goal -----
-        other_goal_positions = new Vector3[goal_resolution];
+        other_goal_positions = new Vector3[goal_resolution + 1];
         Vector3 left_goal_post;
         Vector3 right_goal_post;
 
-        if (friend_tag == "Blue")
+        if (friend_tag == "Red")
         {
             left_goal_post = new Vector3(60, 0, 85);
             right_goal_post = new Vector3(60, 0, 115);
@@ -85,7 +85,7 @@ public class DroneAISoccer_blue : MonoBehaviour
 
         for (int i = 0; i <= goal_resolution; i++)
         {
-            other_goal_positions[i] = Vector3.Lerp(left_goal_post, right_goal_post, i/goal_resolution);
+            other_goal_positions[i] = Vector3.Lerp(left_goal_post, right_goal_post, (float) i /goal_resolution);
         }
         // ----- Discretize goal ----- 
     }
@@ -227,7 +227,13 @@ public class DroneAISoccer_blue : MonoBehaviour
     bool IsBallCloserThan(float distance)
     {
         // Checks if the ball is closer than a certain distance to the agent.
-        return ((ball.transform.position - transform.position).sqrMagnitude < (distance * distance));
+        if ((transform.position - ball.transform.position).magnitude < distance)
+        {
+            Debug.Log("Ball is within kicking distance.");
+            return true;
+        }
+        return false;
+        //return ((ball.transform.position - transform.position).sqrMagnitude < (distance * distance));
     }
 
 
@@ -246,20 +252,25 @@ public class DroneAISoccer_blue : MonoBehaviour
     }
 
 
+    //[Task]
+    //bool ShootingOpportunity()
+    //{
+    //    // Checks if an agent that already has the ball also has the opportunity to score.
+    //    RaycastHit hit;
+    //    foreach (Vector3 goal_position in other_goal_positions)
+    //    {
+    //        Physics.Raycast(ball.transform.position, goal_position, out hit);
+    //        if (hit.transform.gameObject.tag != "Drone")
+    //        {
+    //            return true;
+    //        }
+    //    }
+    //    return false;
+    //}
+
+
     [Task]
-    bool ShootingOpportunity()
-    {
-        // Checks if an agent that already has the ball also has the opportunity to score.
-        foreach (Vector3 goal_position in other_goal_positions)
-        {
-
-        }
-        
-    }
-
-
-    [Task]
-    void Defend(float what_to_do_with_this)
+    void Defend()
     {
         GoToPosition(own_goal.transform.position);
     }
@@ -274,8 +285,28 @@ public class DroneAISoccer_blue : MonoBehaviour
 
 
     [Task]
-    void ShootBall()
+    bool ShootBall()
     {
+        Vector3 goal_direction;
+        RaycastHit hit;
+        foreach (Vector3 goal_position in other_goal_positions)
+        {
+            goal_direction = (goal_position - ball.transform.position).normalized;
+            Physics.Raycast(ball.transform.position, goal_direction, out hit);
+
+            //if (hit.transform.gameObject.name == "Red_goal" || hit.transform.gameObject.name == "Blue_goal")
+            if (hit.transform.gameObject.name != "DroneSoccerCapsule(Clone)")
+            {
+                Debug.DrawLine(ball.transform.position, hit.transform.position, Color.green, 1f);
+                if (CanKick())
+                {
+                    KickBall((maxKickSpeed / 2) * goal_direction);                                            // TODO: Change to not always using maxKickSpeed/2.
+                    return true;
+                }
+            }
+            Debug.DrawLine(ball.transform.position, hit.transform.position, Color.red, 1f);
+        }
+        return false;
     }
 
 
@@ -327,16 +358,17 @@ public class DroneAISoccer_blue : MonoBehaviour
         float grid_center_x = terrain_manager.myInfo.get_x_pos(i);
         float grid_center_z = terrain_manager.myInfo.get_z_pos(j);
 
-        Debug.DrawLine(transform.position, ball.transform.position, Color.black);
-        Debug.DrawLine(transform.position, own_goal.transform.position, Color.green);
-        Debug.DrawLine(transform.position, other_goal.transform.position, Color.yellow);
-        Debug.DrawLine(transform.position, friends[0].transform.position, Color.cyan);
-        Debug.DrawLine(transform.position, enemies[0].transform.position, Color.magenta);
+        //Debug.DrawLine(transform.position, ball.transform.position, Color.black);
+        //Debug.DrawLine(transform.position, own_goal.transform.position, Color.green);
+        //Debug.DrawLine(transform.position, other_goal.transform.position, Color.yellow);
+        //Debug.DrawLine(transform.position, friends[0].transform.position, Color.cyan);
+        //Debug.DrawLine(transform.position, enemies[0].transform.position, Color.magenta);
 
         if (CanKick())
         {
-            Debug.DrawLine(transform.position, ball.transform.position, Color.red);
+            //Debug.DrawLine(transform.position, ball.transform.position, Color.red);
             //KickBall(maxKickSpeed * Vector3.forward);
+            ShootBall();
         }
 
 
@@ -378,6 +410,11 @@ public class DroneAISoccer_blue : MonoBehaviour
             else
             {
                 Handles.Label(transform.position, "Midfielder");
+            }
+
+            foreach (Vector3 goal_pos in other_goal_positions)
+            {
+                Handles.Label(goal_pos, "X");
             }
         }
     }

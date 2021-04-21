@@ -11,7 +11,7 @@ tree("Root")
 
 tree("Goalkeeper")
 	fallback
-		Defend 0.3
+		Defend
 	
 
 tree("Forward")
@@ -22,7 +22,6 @@ tree("Forward")
 		sequence
 			IsBallCloserThan 7.0
 			sequence
-				ShootingOpportunity
 				ShootBall
 			Dribble
 		InterceptBall
