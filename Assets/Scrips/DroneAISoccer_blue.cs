@@ -128,26 +128,30 @@ public class DroneAISoccer_blue : MonoBehaviour
         Vector3 our_position = agent.transform.position;
         Vector3 our_velocity = agent.GetComponent<Rigidbody>().velocity;
 
+        if (target_velocity.magnitude < 2 ) {
+            return target_position - our_position ;
+        }
+
         Vector3 bearing = (our_position - target_position).normalized;
 
         Vector3 new_point = (target_position + target_velocity);
 
         Vector3 delta = new_point - our_position;
-        int i = 0;
-        while (delta.magnitude > max_speed ) { // or difference between delta and our velocity is too big ( should be checked alongside the magnitude tho)
-            i = i + 1;
-            new_point = new_point + bearing;
-            delta = new_point - our_position;
-            if (i == 15) {
-                Vector3 right = new Vector3(bearing.z, 0.0f, - bearing.x );
-                Vector3 left  = new Vector3(- bearing.z, 0.0f, bearing.x);
-                if ((target_position - (our_position + right)).magnitude > (target_position - (our_position + right)).magnitude) {
-                    delta = left * max_speed;
-                } else {
-                    delta = right * max_speed;
-                }
-            }
-        }
+        // int i = 0;
+        // while (delta.magnitude > max_speed ) { // or difference between delta and our velocity is too big ( should be checked alongside the magnitude tho)
+        //     i = i + 1;
+        //     new_point = new_point + bearing;
+        //     delta = new_point - our_position;
+        //     if (i == 15) {
+        //         Vector3 right = new Vector3(bearing.z, 0.0f, - bearing.x );
+        //         Vector3 left  = new Vector3(- bearing.z, 0.0f, bearing.x);
+        //         if ((target_position - (our_position + right)).magnitude > (target_position - (our_position + right)).magnitude) {
+        //             delta = left * max_speed;
+        //         } else {
+        //             delta = right * max_speed;
+        //         }
+        //     }
+        // }
 
         return delta;
     }
@@ -312,7 +316,7 @@ public class DroneAISoccer_blue : MonoBehaviour
     [Task]
     void InterceptBall()
     {
-        Vector3 target_speed = InterceptTarget(ball, transform.gameObject);
+        Vector3 target_speed = InterceptTarget( gameObject, ball);
         Move_with_speed(target_speed);
     }
 
