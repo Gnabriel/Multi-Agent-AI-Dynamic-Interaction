@@ -36,6 +36,9 @@ public class DroneAISoccer_blue : MonoBehaviour
     public float maxKickSpeed = 40f;
     public float lastKickTime = 0f;
 
+    public float max_speed = 15f;
+    public float max_acceleration = 15f;
+
     private void Start()
     {
         myPandaBT = GetComponent<PandaBehaviour>();
@@ -96,6 +99,7 @@ public class DroneAISoccer_blue : MonoBehaviour
     {
         Vector3 target_velocity = target.GetComponent<Rigidbody>().velocity;
         Vector3 target_direction = (target.transform.position - agent.transform.position).normalized;
+        return ball.transform.position;     // Temporary
     }
 
 
@@ -103,8 +107,8 @@ public class DroneAISoccer_blue : MonoBehaviour
     {
         // Returns score of how this agent is suited to be goalkeeper.
         Vector3 own_goal_to_agent = agent.transform.position - own_goal.transform.position;
-        //Vector3 own_goal_to_ball = ball.transform.position - own_goal.transform.position;
-        return -own_goal_to_agent.magnitude;
+        Vector3 ball_to_agent = agent.transform.position - ball.transform.position;
+        return -own_goal_to_agent.magnitude + ball_to_agent.magnitude;
     }
 
 
@@ -123,6 +127,7 @@ public class DroneAISoccer_blue : MonoBehaviour
         float my_goalkeeper_score = GoalkeeperScore(transform.gameObject);
         float best_goalkeeper_score = float.MinValue;
         float friend_goalkeeper_score;
+        int best_goalkeeper_index = -1;
         foreach (GameObject friend in friends)
         {
             if (friend != transform.gameObject)
@@ -131,24 +136,27 @@ public class DroneAISoccer_blue : MonoBehaviour
                 if (friend_goalkeeper_score > best_goalkeeper_score)
                 {
                     best_goalkeeper_score = friend_goalkeeper_score;
+                    best_goalkeeper_index = Array.IndexOf(friends, friend);
                 }
             }
         }
-        // ----- Debugging -----
-        if (TESTING)
+
+        //Check if this agent is the best goalkeeper.
+        if (my_goalkeeper_score > best_goalkeeper_score)
         {
-            if (Mathf.Approximately(best_goalkeeper_score, my_goalkeeper_score))
+            currently_gk = true;            // Used for debugging.
+            return true;
+        }
+        else if (my_goalkeeper_score == best_goalkeeper_score)
+        {
+            if (Array.IndexOf(friends, transform.gameObject) < best_goalkeeper_index)                   // If they are equally suited for goalkeeper, pick first one in friends list.
             {
-                currently_gk = true;
-            }
-            else
-            {
-                currently_gk = false;
+                currently_gk = true;        // Used for debugging.
+                return true;
             }
         }
-        // ----- /Debugging -----
-        // Check if this agent is the best goalkeeper.
-        return Mathf.Approximately(best_goalkeeper_score, my_goalkeeper_score);
+        currently_gk = false;               // Used for debugging.
+        return false;
     }
 
 
@@ -235,7 +243,7 @@ public class DroneAISoccer_blue : MonoBehaviour
     [Task]
     void InterceptBall()
     {
-        Vector3 target_position = InterceptTarget(ball, transform.position);
+        Vector3 target_position = InterceptTarget(ball, transform.gameObject);
         GoToPosition(target_position);
     }
 
