@@ -70,14 +70,14 @@ public class Map
                 if (CheckObstacle(i, j))
                 {
                     obstacles[i, j] = 1;
-                    Debug.DrawLine(s, g1, Color.red, 1000f);
-                    Debug.DrawLine(s, g2, Color.red, 1000f);
+                    // Debug.DrawLine(s, g1, Color.red, 1000f);
+                    // Debug.DrawLine(s, g2, Color.red, 1000f);
                 }
-                else
-                {
-                    Debug.DrawLine(s, g1, Color.green, 1000f);
-                    Debug.DrawLine(s, g2, Color.green, 1000f);
-                }
+                // else
+                // {
+                //     Debug.DrawLine(s, g1, Color.green, 1000f);
+                //     Debug.DrawLine(s, g2, Color.green, 1000f);
+                // }
 
 
 

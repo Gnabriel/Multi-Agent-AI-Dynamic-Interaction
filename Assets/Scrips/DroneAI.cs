@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using System.Linq;
 
 [RequireComponent(typeof(DroneController))]
 public class DroneAI : MonoBehaviour
@@ -11,17 +12,18 @@ public class DroneAI : MonoBehaviour
     // ----- /Debugging -----
 
     // ----- Misc -----
-    public static float desired_speed = 0.5f;          // TODO: Set speed.                 // Desired constant speed of the agents.
+    public static float desired_speed = 50f;          // TODO: Set speed.                 // Desired constant speed of the agents.
     public static float sensor_length = 15f;           // TODO: Play with value.           // Length of the obstacle detecting sensors around an agent.
     public static int sensor_resolution = 30;          // TODO: Play with value.           // Angle resolution in degrees of the obstacle detecting sensors around an agent.
-    public static float vo_length = 30f;
+    public static float vo_length = 900f;
     public Map map;
-    private const float grid_size = 7.5f;
+    private const float grid_size = 1f;
     List<Vector3> my_path;
     public GameObject[] friends;
     public List<GameObject> agents;
     public List<Vector3> obstacles;
-    public static float drone_radius = 1.0f;
+    public static float drone_radius = 2.5f;
+    public int index;
     // ----- /Misc -----
 
     // ----- Unity objects -----
@@ -41,16 +43,22 @@ public class DroneAI : MonoBehaviour
         my_rigidbody = GetComponent<Rigidbody>();
 
         friends = GameObject.FindGameObjectsWithTag("Drone");
-        
+        int i = 0;
+        foreach (GameObject friend in friends) {
+            if (friend == gameObject) {
+                index = i;
+            }
+            i = i + 1;
+        }
         map = new Map(terrain_manager, grid_size);
         my_path = A_star(transform.position, my_goal_object.transform.position);
-
-        Vector3 old_wp = transform.position;
-        foreach (var wp in my_path)
-        {
-            Debug.DrawLine(old_wp, wp, Color.red, 100f);
-            old_wp = wp;
-        }
+        
+        // Vector3 old_wp = transform.position;
+        // foreach (var wp in my_path)
+        // {
+        //     Debug.DrawLine(old_wp, wp, Color.red, 100f);
+        //     old_wp = wp;
+        // }
     }
 
 
@@ -63,29 +71,47 @@ public class DroneAI : MonoBehaviour
 
         Vector3 relVect = destination - transform.position;
 
-        if (relVect.magnitude < 9 & my_path.Count != 1) {
-            // RaycastHit info;
-            // destination = my_path[1];
-            // relVect = destination - transform.position;
-            // if (Physics.Raycast(transform.position, relVect, out info, relVect.magnitude)) {
-            my_path.RemoveAt(0);
-            destination = my_path[0];
+        if (relVect.magnitude < 25 & my_path.Count != 1) {
+            RaycastHit info;
+            destination = my_path[1];
             relVect = destination - transform.position;
-            // } else {
-            // }
+            if (!Physics.SphereCast(transform.position, drone_radius, relVect, out info, relVect.magnitude)) {
+                my_path.RemoveAt(0);
+            } else {
+                destination = my_path[0];
+            }
         }
         Vector3 new_vel = CollisionAvoidance(agents, obstacles, destination);
         //Vector3 new_vel = new Vector3(0, 0, 0);
+        new_vel.y = 0.0f;
 
-        if (ENABLE_DEBUG)
-        {
-            Debug.DrawLine(this.transform.position, this.transform.position + new_vel, Color.magenta, 0);
+        Vector3 acceleration;
+
+        if (Double.IsNaN((double)new_vel.x) | Double.IsNaN((double)new_vel.z)) {
+            acceleration = new Vector3(1, 0, 0);
+            new_vel = acceleration;
+        } else {
+            acceleration = new_vel - my_rigidbody.velocity;
         }
 
-        m_Drone.Move_vect(new_vel);
+        
+        if (index == 0) {
+            Debug.Log("Acceleration = " + acceleration);
+        }
+        if (ENABLE_DEBUG)
+        {
+            if (gameObject == agents[agents.Count - 1]) {
+                // Debug.Log("one round done" + new_vel);
+            }
+            Debug.DrawLine(this.transform.position, this.transform.position + new_vel, Color.red, 0.2f);
+            
+            Debug.DrawLine(this.transform.position, this.transform.position + acceleration, Color.blue, 0.2f);
+        }
+
+        m_Drone.Move_vect(acceleration);
     }
 
-
+    int CollisionAvoidancecalls = 0;
     public Vector3 CollisionAvoidance(List<GameObject> agents, List<Vector3> obstacles, Vector3 destination)
     {
         // Collision avoidance using Hybrid Reciprocal Velocity Obstacles (HRVO).
@@ -136,7 +162,16 @@ public class DroneAI : MonoBehaviour
             agent_i_vo_list.Add(vo);                                                                            // Save the VO*_Ai|Oj in a list for this agent_i. 
         }
 
-        agent_i_v_pref = GetPreferredVelocity();                                                                // Get the preferred velocity if no other agents would exist.
+        if (index == 0) {
+            foreach (VO v in agent_i_hrvo_list) {
+                // Debug.DrawLine(transform.position, v.origin,Color.magenta, 0.1f);
+                Debug.DrawLine(v.origin, v.origin + new Vector3((float)Math.Cos(v.left_boundary),0.0f,(float)Math.Sin(v.left_boundary)) * 10.0f,Color.magenta, 0.1f);
+                Debug.DrawLine(v.origin, v.origin + new Vector3((float)Math.Cos(v.right_boundary),0.0f,(float)Math.Sin(v.right_boundary)) * 10.0f,Color.magenta, 0.1f);
+            }
+        }
+
+        CollisionAvoidancecalls = CollisionAvoidancecalls + 1;
+        agent_i_v_pref = GetPreferredVelocity(destination);                                                                // Get the preferred velocity if no other agents would exist.
         agent_i_v_new = GetNewVelocity(agent_i_hrvo_list, agent_i_vo_list, agent_i_v_pref);                                                   // Velocity that is closest to the pref. velocity but without collisions.
 
         return agent_i_v_new;
@@ -242,8 +277,10 @@ public class DroneAI : MonoBehaviour
         return new VO(rvito.distance, rvito.left_boundary, rvito.right_boundary, new_origin);
     }
 
-
+    int calls = 0;
+    int success = 0;
     bool contained_in_vo(Vector3 point, List<VO> hrvo_list, List<VO> vo_list) {
+        calls = calls + 1;
         foreach (VO hrvito in hrvo_list) {
             Vector3 new_point = point - hrvito.origin;
             if (new_point.magnitude > vo_length) {
@@ -262,6 +299,7 @@ public class DroneAI : MonoBehaviour
                 return true;
             }
         }
+        success = success + 1;
         return false;
     }
 
@@ -290,13 +328,13 @@ public class DroneAI : MonoBehaviour
     }
 
 
-    public Vector3 GetPreferredVelocity()
+    public Vector3 GetPreferredVelocity(Vector3 target_pos)
     {
         // Returns the preferred velocity for this agent if no other agents would exist.
         // Output: velocity vector.
-        Vector3 current_pos = this.transform.position;
-        Vector3 target_pos = new Vector3(0, 0, 0);                                                                  // TODO: Get this from A*.
-        return desired_speed * ((current_pos - target_pos) / (current_pos - target_pos).sqrMagnitude);              // TODO: Do they mean squared in the paper? (they write sub 2)
+        Vector3 current_pos = this.transform.position;                                                               // TODO: Get this from A*.
+        return desired_speed * ((target_pos - current_pos ) / (target_pos - current_pos).sqrMagnitude);              // TODO: Do they mean squared in the paper? (they write sub 2)
+        //return target_pos - current_pos;
     }
 
 
@@ -305,6 +343,7 @@ public class DroneAI : MonoBehaviour
         // Helper function to GetNewVelocity(). Computes possible new velocities. Substitute for the ClearPath algorithm.
         // Output: list of velocity vectors.
         Vector3 my_position = this.transform.position;
+        my_position.y = 0.0f;
         List<Vector3> new_velocities;                                                                               // New velocities
         List<Vector3> permissible_velocities = new List<Vector3>();
         List<VO> vo_combined_list = new List<VO>();
@@ -331,25 +370,33 @@ public class DroneAI : MonoBehaviour
                     (vo2_line2_m, vo2_line2_b) = linefromangle(vo2.origin, vo2.right_boundary);                     // Get right line of other velocity obstacle.
 
                     // Intersections of VO1's left line and VO2.
-                    new_velocities.Add(intersection(vo1_line1_m, vo1_line1_b, vo2_line1_m, vo2_line1_b) - my_position);     // TODO: Subtract my_position or not?
-                    new_velocities.Add(intersection(vo1_line1_m, vo1_line1_b, vo2_line2_m, vo2_line2_b) - my_position);
+                    //Debug.Log(intersection(vo1_line1_m, vo1_line1_b, vo2_line1_m, vo2_line1_b) +"  "+ my_position +"  "+ v_pref);
+                    Vector3 inti;
+                    inti = intersection(vo1_line1_m, vo1_line1_b, vo2_line1_m, vo2_line1_b);
+                    if (!(inti.x == 0.0f & inti.z == 0.0f)) {
+                        new_velocities.Add(inti - my_position - v_pref);     // TODO: Subtract my_position or not?
+                    }
+                    inti = intersection(vo1_line1_m, vo1_line1_b, vo2_line2_m, vo2_line2_b);
+                    if (!(inti.x == 0.0f & inti.z == 0.0f)) {
+                        new_velocities.Add(inti - my_position - v_pref);     // TODO: Subtract my_position or not?
+                    }
 
                     // Intersections of VO1's right line and VO2.
-                    new_velocities.Add(intersection(vo1_line2_m, vo1_line2_b, vo2_line1_m, vo2_line1_b) - my_position);
-                    new_velocities.Add(intersection(vo1_line2_m, vo1_line2_b, vo2_line2_m, vo2_line2_b) - my_position);
+                    inti = intersection(vo1_line2_m, vo1_line2_b, vo2_line1_m, vo2_line1_b);
+                    if (!(inti.x == 0.0f & inti.z == 0.0f)) {
+                        new_velocities.Add(inti - my_position - v_pref);     // TODO: Subtract my_position or not?
+                    }
+                    inti = intersection(vo1_line2_m, vo1_line2_b, vo2_line2_m, vo2_line2_b);
+                    if (!(inti.x == 0.0f & inti.z == 0.0f)) {
+                        new_velocities.Add(inti - my_position - v_pref);     // TODO: Subtract my_position or not?
+                    }
                 }
             }
             // Add projections of the preferred velocity vector onto VO1's left and right line.
-            new_velocities.Add(Vector3.Project(v_pref, new Vector3(1f, 0f, vo1_line1_m)) + my_position);
-            new_velocities.Add(Vector3.Project(v_pref, new Vector3(1f, 0f, vo1_line2_m)) + my_position);
+            new_velocities.Add(Vector3.Project(v_pref, new Vector3(1f, 0f, vo1_line1_m)) - v_pref);
+            new_velocities.Add(Vector3.Project(v_pref, new Vector3(1f, 0f, vo1_line2_m)) - v_pref);
 
-            foreach (Vector3 velocity in new_velocities)
-            {
-                if (!contained_in_vo(velocity, hrvo_list, vo_list))                                             // Check that the velocities are permissible, ie. not inside a VO.
-                {
-                    permissible_velocities.Add(velocity);
-                }
-            }
+            permissible_velocities.AddRange(new_velocities);
         }
         return permissible_velocities;
     }
@@ -360,18 +407,36 @@ public class DroneAI : MonoBehaviour
         // Chooses a new velocity to compute a trajectory toward the goal without collisions with any other agent.
         // Input: HRVO object, preferred velocity vector.
         // Output: velocity vector.
-        Vector3 v_new = new Vector3(0, 0, 0);                                                                       // Default action is to stay still.         TODO: Change this?
-        float min_diff = float.MaxValue;
-        float diff;
+        Vector3 v_new = new Vector3(1, 0, 0);
         List<Vector3> permissible_new_velocities = GetPermissibleNewVelocities(hrvo_list, vo_list, v_pref);
-        foreach (Vector3 v in permissible_new_velocities)
-        {
-            diff = (v - v_pref).sqrMagnitude;                                                                       // TODO: Do they mean squared in the paper? (they write sub 2)
-            if (diff < min_diff)
-            {
-                v_new = v;
-                min_diff = diff;
+
+        List<Vector3> sorted_velocities = permissible_new_velocities.OrderBy(v => v.magnitude).ToList();
+        sorted_velocities.Insert(0, v_pref);
+        int i = 0;
+        //Debug.Log(hrvo_list.Count + "    " + vo_list.Count + "    " + sorted_velocities.Count);
+        if (index == 0) {
+            Debug.Log("many velocities = " + sorted_velocities.Count);
+        }
+        foreach (Vector3 v in sorted_velocities)
+        {   
+            i = i + 1;
+            if (!contained_in_vo(v + v_pref + transform.position, hrvo_list, vo_list)) {
+                if (index == 0) {
+                    Debug.DrawLine(transform.position, v + v_pref + transform.position,Color.green);
+                }
+                v_new = v + v_pref;
+                break;
             }
+            if (index == 0) {
+                Debug.DrawLine(transform.position, v + v_pref + transform.position,Color.white);
+            }
+            if (i == 50 & index != 0) {
+                v_new = v + v_pref;
+                break;
+            }
+        }
+        if (index == 0) {
+            Debug.Log(CollisionAvoidancecalls + " - Number of calls to contained_in_vo vs times it returns sucess " + calls + " " + success);
         }
         return v_new;
     }
@@ -399,6 +464,7 @@ public class DroneAI : MonoBehaviour
         //sensor_length = 30;
         //sensor_resolution = 20;
         Vector3 my_position = m_Drone.transform.position;
+        my_position.y = 0.0f;
         Vector3 sensor_direction = my_position + new Vector3(0, 0, sensor_length);
         RaycastHit hit;
         List<Vector3> obstacles = new List<Vector3>();
@@ -428,6 +494,7 @@ public class DroneAI : MonoBehaviour
         // Efficiently checks for agents and obstacles around this agent given a sensor length (initialized as instance variables).
         // Output: list of agents, list of obstacle positions.
         Vector3 my_position = m_Drone.transform.position;
+        my_position.y = 0.0f;
         List<GameObject> nearby_agents = new List<GameObject>();
         List<Vector3> nearby_obstacles = new List<Vector3>();
 
@@ -443,8 +510,8 @@ public class DroneAI : MonoBehaviour
                 {
                     //nearby_agents.Add(hit_collider.gameObject);
                     nearby_agents.Add(hit_collider.gameObject.transform.parent.gameObject);                                         // TODO: Add parent object or not?
-                    if (ENABLE_DEBUG)
-                    {
+                    if (ENABLE_DEBUG & index == 0)
+                    {   
                         Debug.DrawLine(my_position, hit_collider.gameObject.transform.position, Color.blue, 0);
                     }
                 }
@@ -452,7 +519,7 @@ public class DroneAI : MonoBehaviour
                 else if (mesh.name == "Cube" || mesh.name == "Cube Instance")
                 {
                     nearby_obstacles.Add(hit_collider.gameObject.transform.position);
-                    if (ENABLE_DEBUG)
+                    if (ENABLE_DEBUG & index == 0)
                     {
                         Debug.DrawLine(my_position, hit_collider.gameObject.transform.position, Color.red, 0);
                     }
@@ -481,6 +548,9 @@ public class DroneAI : MonoBehaviour
     }
 
     public Vector3 intersection(float m_1, float b_1, float m_2, float b_2) {
+        if (m_1 == m_2) {
+            return new Vector3(0.0f,0.0f,0.0f);
+        }
         float x = (b_2 - b_1) / (m_1 - m_2);
         float z = m_1*x + b_1;
 
@@ -705,7 +775,7 @@ public class DroneAI : MonoBehaviour
             }
 
             int[] grid = map.GetGridIndex(x, z);
-            float collision_cost = Math.Abs(map.nodes[grid[0], grid[1]])*0;//Add cost for walking on collision turrets
+            float collision_cost = Math.Abs(map.nodes[grid[0], grid[1]])*1;//Add cost for walking on collision turrets
             float same_path_cost = 0; //add cost to avoid taking exactly same path as other cars
 
         
