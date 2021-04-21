@@ -148,7 +148,6 @@ public class DroneAISoccer_blue : MonoBehaviour
                 }
             }
         }
-
         return delta;
     }
 
@@ -168,6 +167,7 @@ public class DroneAISoccer_blue : MonoBehaviour
         Vector3 ball_to_agent = agent.transform.position - ball.transform.position;
         return -ball_to_agent.magnitude;
     }
+
 
     void Move_with_speed(Vector3 speed) {
         Rigidbody my_rigidbody = GetComponent<Rigidbody>();
@@ -312,8 +312,9 @@ public class DroneAISoccer_blue : MonoBehaviour
     [Task]
     void InterceptBall()
     {
-        Vector3 target_speed = InterceptTarget(ball, transform.gameObject);
-        Move_with_speed(target_speed);
+        //Vector3 target_speed = InterceptTarget(transform.gameObject, ball);
+        //Move_with_speed(target_speed);
+        GoToPosition(ball.transform.position);
     }
 
 

@@ -11,6 +11,12 @@ tree("Root")
 
 tree("Goalkeeper")
 	fallback
+		sequence
+			IsBallCloserThan 7.0
+			ShootBall
+		sequence
+			IsBallCloserThan 30.0
+			InterceptBall
 		Defend
 	
 
@@ -30,6 +36,6 @@ tree("Forward")
 tree("Midfielder")
 	fallback
 		sequence
-			TeammatesHaveBall
-			GoCenter
+			IsBallCloserThan 7.0
+			ShootBall
 		InterceptBall
