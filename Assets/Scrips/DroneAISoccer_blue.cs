@@ -108,31 +108,32 @@ public class DroneAISoccer_blue : MonoBehaviour
 
 
     [Task]
-    bool IsChaser()
+    bool IsForward()
     {
-        float my_chaser_score = ChaserScore(transform.gameObject);
+        float my_forward_score = ForwardScore(transform.gameObject);
         float my_goalkeeper_score = GoalkeeperScore(transform.gameObject);
-        float best_chaser_score = float.MinValue;
+        float best_forward_score = float.MinValue;
         float best_goalkeeper_score = float.MinValue;
-        int i = 0;
+        float friend_forward_score;
+        float friend_goalkeeper_score;
         foreach (GameObject friend in friends)
         {
-            if (friend != transform.gameObject)                                 // TODO: is this check valid? or check pos?
+            if (friend != transform.gameObject)                                                             // TODO: is this check valid? or check pos instead?
             {
-                chaser_score = ChaserScore(friend);
-                goalkeeper_score = GoalkeeperScore(friend);
-                if (chaser_score > best_chaser_score)
+                friend_forward_score = ForwardScore(friend);
+                friend_goalkeeper_score = GoalkeeperScore(friend);
+                if (friend_forward_score > best_forward_score)
                 {
-                    best_chaser_score = chaser_score;
+                    best_forward_score = friend_forward_score;
                 }
-                if (goalkeeper_score > best_goalkeeper_score)
+                if (friend_goalkeeper_score > best_goalkeeper_score)
                 {
-                    best_goalkeeper_score = goalkeeper_score;
+                    best_goalkeeper_score = friend_goalkeeper_score;
                 }
             } 
         }
         // Check if this agent is the best chaser but at the same time not the best goalkeeper.
-        if (my_chaser_score > best_chaser_score && my_goalkeeper_score <= best_goalkeeper_score)        // TODO: is this right?
+        if (my_forward_score > best_forward_score && my_goalkeeper_score <= best_goalkeeper_score)          // TODO: is this right?
         {
             return true;
         }

@@ -4,7 +4,7 @@ tree("Root")
 			IsGoalkeeper
 			tree("Goalkeeper")
 		sequence
-			IsChaser
+			IsForward
 			tree("Forward")
 		tree("Midfielder")
 
