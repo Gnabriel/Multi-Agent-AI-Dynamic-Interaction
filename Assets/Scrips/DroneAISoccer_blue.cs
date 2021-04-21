@@ -3,12 +3,19 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 using Panda;
+using UnityEditor;
 
 
 
 [RequireComponent(typeof(DroneController))]
 public class DroneAISoccer_blue : MonoBehaviour
 {
+    // ----- Debugging -----
+    bool TESTING = true;
+    bool currently_gk;
+    bool currently_fw;
+    // ----- /Debugging -----
+
     private DroneController m_Drone; // the drone controller we want to use
 
     public GameObject terrain_manager_game_object;
@@ -85,6 +92,13 @@ public class DroneAISoccer_blue : MonoBehaviour
     }
 
 
+    public Vector3 InterceptTarget(GameObject agent, GameObject target)
+    {
+        Vector3 target_velocity = target.GetComponent<Rigidbody>().velocity;
+        Vector3 target_direction = (target.transform.position - agent.transform.position).normalized;
+    }
+
+
     public float GoalkeeperScore(GameObject agent)                                                          // TODO: Add more advanced scoring.
     {
         // Returns score of how this agent is suited to be goalkeeper.
@@ -111,7 +125,7 @@ public class DroneAISoccer_blue : MonoBehaviour
         float friend_goalkeeper_score;
         foreach (GameObject friend in friends)
         {
-            if (friend != transform.gameObject)                                                             // TODO: is this check valid? or check pos instead?
+            if (friend != transform.gameObject)
             {
                 friend_goalkeeper_score = GoalkeeperScore(friend);
                 if (friend_goalkeeper_score > best_goalkeeper_score)
@@ -120,12 +134,21 @@ public class DroneAISoccer_blue : MonoBehaviour
                 }
             }
         }
-        // Check if this agent is the best goalkeeper.
-        if (my_goalkeeper_score >= best_goalkeeper_score)          // TODO: is this right?
+        // ----- Debugging -----
+        if (TESTING)
         {
-            return true;
+            if (Mathf.Approximately(best_goalkeeper_score, my_goalkeeper_score))
+            {
+                currently_gk = true;
+            }
+            else
+            {
+                currently_gk = false;
+            }
         }
-        return false;
+        // ----- /Debugging -----
+        // Check if this agent is the best goalkeeper.
+        return Mathf.Approximately(best_goalkeeper_score, my_goalkeeper_score);
     }
 
 
@@ -156,6 +179,20 @@ public class DroneAISoccer_blue : MonoBehaviour
                 }
             } 
         }
+        // ----- Debugging -----
+        if (TESTING)
+        {
+            if (my_forward_score >= best_forward_score && my_goalkeeper_score <= best_goalkeeper_score)
+            {
+                currently_fw = true;
+            }
+            else
+            {
+                currently_fw = false;
+            }
+        }
+        // ----- /Debugging -----
+
         // Check if this agent is the best chaser but at the same time not the best goalkeeper.
         if (my_forward_score >= best_forward_score && my_goalkeeper_score <= best_goalkeeper_score)          // TODO: is this right?
         {
@@ -177,20 +214,29 @@ public class DroneAISoccer_blue : MonoBehaviour
     bool TeammatesHaveBall()
     {
         // Checks if the ball is currently held by one of this agent's teammates.
+        foreach (GameObject friend in friends)
+        {
+            if ((transform.position - ball.transform.position).magnitude < 7f)                              // 7 units seems to be the distance needed to kick the ball.
+            {
+                return true;
+            }
+        }
         return false;
     }
 
 
     [Task]
-    void Defend(float what_the_hell_is_this)
+    void Defend(float what_to_do_with_this)
     {
+        GoToPosition(own_goal.transform.position);
     }
 
 
     [Task]
     void InterceptBall()
     {
-        Vector3 desired_position;
+        Vector3 target_position = InterceptTarget(ball, transform.position);
+        GoToPosition(target_position);
     }
 
 
@@ -204,6 +250,8 @@ public class DroneAISoccer_blue : MonoBehaviour
     void GoCenter()
     {
         // Moves this agent toward the center of the field lengtwise.
+        Vector3 center = Vector3.Lerp(own_goal.transform.position, other_goal.transform.position, 0.5f);        // TODO: does this return the center point correctly?
+        GoToPosition(center);                                                                   // TODO: Change this to add margin and/or make it dynamic somehow.
     }
 
 
@@ -211,6 +259,7 @@ public class DroneAISoccer_blue : MonoBehaviour
     void GoFishing()
     {
         // Moves this agent toward the opposing team's goal.
+        GoToPosition(other_goal.transform.position);                                            // TODO: Change this to add margin and/or make it dynamic somehow.
     }
 
 
@@ -272,6 +321,26 @@ public class DroneAISoccer_blue : MonoBehaviour
     {
         myPandaBT.Reset();
         myPandaBT.Tick();
+    }
+
+
+    public void OnDrawGizmos()
+    {
+        if (TESTING)
+        {
+            if (currently_gk)
+            {
+                Handles.Label(transform.position, "Goalkeeper");
+            }
+            else if (currently_fw)
+            {
+                Handles.Label(transform.position, "Forward");
+            }
+            else
+            {
+                Handles.Label(transform.position, "Midfielder");
+            }
+        }
     }
 }
 
