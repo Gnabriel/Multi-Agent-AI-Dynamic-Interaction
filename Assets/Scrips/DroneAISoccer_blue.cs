@@ -85,16 +85,18 @@ public class DroneAISoccer_blue : MonoBehaviour
     }
 
 
-    public float GoalkeeperScore(GameObject agent)
+    public float GoalkeeperScore(GameObject agent)                                                          // TODO: Add more advanced scoring.
     {
+        // Returns score of how this agent is suited to be goalkeeper.
         Vector3 own_goal_to_agent = agent.transform.position - own_goal.transform.position;
         //Vector3 own_goal_to_ball = ball.transform.position - own_goal.transform.position;
         return -own_goal_to_agent.magnitude;
     }
 
 
-    public float ForwardScore(GameObject agent)
+    public float ForwardScore(GameObject agent)                                                             // TODO: Add more advanced scoring.
     {
+        // Returns score of how this agent is suited to be forward.
         Vector3 ball_to_agent = agent.transform.position - ball.transform.position;
         return -ball_to_agent.magnitude;
     }
@@ -103,6 +105,26 @@ public class DroneAISoccer_blue : MonoBehaviour
     [Task]
     bool IsGoalkeeper()
     {
+        // Checks if this agent is currently best suited to be goalkeeper or not.
+        float my_goalkeeper_score = GoalkeeperScore(transform.gameObject);
+        float best_goalkeeper_score = float.MinValue;
+        float friend_goalkeeper_score;
+        foreach (GameObject friend in friends)
+        {
+            if (friend != transform.gameObject)                                                             // TODO: is this check valid? or check pos instead?
+            {
+                friend_goalkeeper_score = GoalkeeperScore(friend);
+                if (friend_goalkeeper_score > best_goalkeeper_score)
+                {
+                    best_goalkeeper_score = friend_goalkeeper_score;
+                }
+            }
+        }
+        // Check if this agent is the best goalkeeper.
+        if (my_goalkeeper_score >= best_goalkeeper_score)          // TODO: is this right?
+        {
+            return true;
+        }
         return false;
     }
 
@@ -110,6 +132,8 @@ public class DroneAISoccer_blue : MonoBehaviour
     [Task]
     bool IsForward()
     {
+        // Checks if this agent is currently best suited to be forward or not.
+        // (but at the same time not goalkeeper, i.e goalkeeper is prioritized).
         float my_forward_score = ForwardScore(transform.gameObject);
         float my_goalkeeper_score = GoalkeeperScore(transform.gameObject);
         float best_forward_score = float.MinValue;
@@ -133,7 +157,7 @@ public class DroneAISoccer_blue : MonoBehaviour
             } 
         }
         // Check if this agent is the best chaser but at the same time not the best goalkeeper.
-        if (my_forward_score > best_forward_score && my_goalkeeper_score <= best_goalkeeper_score)          // TODO: is this right?
+        if (my_forward_score >= best_forward_score && my_goalkeeper_score <= best_goalkeeper_score)          // TODO: is this right?
         {
             return true;
         }
@@ -152,7 +176,7 @@ public class DroneAISoccer_blue : MonoBehaviour
     [Task]
     bool TeammatesHaveBall()
     {
-
+        // Checks if the ball is currently held by one of this agent's teammates.
         return false;
     }
 
@@ -179,12 +203,14 @@ public class DroneAISoccer_blue : MonoBehaviour
     [Task]
     void GoCenter()
     {
+        // Moves this agent toward the center of the field lengtwise.
     }
 
 
     [Task]
     void GoFishing()
     {
+        // Moves this agent toward the opposing team's goal.
     }
 
 
