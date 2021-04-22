@@ -137,22 +137,21 @@ public class DroneAISoccer_blue : MonoBehaviour
         Vector3 new_point = (target_position + target_velocity);
 
         Vector3 delta = new_point - our_position;
-        // int i = 0;
-        // while (delta.magnitude > max_speed ) { // or difference between delta and our velocity is too big ( should be checked alongside the magnitude tho)
-        //     i = i + 1;
-        //     new_point = new_point + bearing;
-        //     delta = new_point - our_position;
-        //     if (i == 15) {
-        //         Vector3 right = new Vector3(bearing.z, 0.0f, - bearing.x );
-        //         Vector3 left  = new Vector3(- bearing.z, 0.0f, bearing.x);
-        //         if ((target_position - (our_position + right)).magnitude > (target_position - (our_position + right)).magnitude) {
-        //             delta = left * max_speed;
-        //         } else {
-        //             delta = right * max_speed;
-        //         }
-        //     }
-        // }
-
+        int i = 0;
+        while (delta.magnitude > max_speed ) { // or difference between delta and our velocity is too big ( should be checked alongside the magnitude tho)
+            i = i + 1;
+            new_point = new_point + bearing;
+            delta = new_point - our_position;
+            if (i == 15) {
+                Vector3 right = new Vector3(bearing.z, 0.0f, - bearing.x );
+                Vector3 left  = new Vector3(- bearing.z, 0.0f, bearing.x);
+                if ((target_position - (our_position + right)).magnitude > (target_position - (our_position + right)).magnitude) {
+                    delta = left * max_speed;
+                } else {
+                    delta = right * max_speed;
+                }
+            }
+        }
         return delta;
     }
 
@@ -172,6 +171,7 @@ public class DroneAISoccer_blue : MonoBehaviour
         Vector3 ball_to_agent = agent.transform.position - ball.transform.position;
         return -ball_to_agent.magnitude;
     }
+
 
     void Move_with_speed(Vector3 speed) {
         Rigidbody my_rigidbody = GetComponent<Rigidbody>();
@@ -316,8 +316,9 @@ public class DroneAISoccer_blue : MonoBehaviour
     [Task]
     void InterceptBall()
     {
-        Vector3 target_speed = InterceptTarget( gameObject, ball);
-        Move_with_speed(target_speed);
+        //Vector3 target_speed = InterceptTarget(transform.gameObject, ball);
+        //Move_with_speed(target_speed);
+        GoToPosition(ball.transform.position);
     }
 
 
