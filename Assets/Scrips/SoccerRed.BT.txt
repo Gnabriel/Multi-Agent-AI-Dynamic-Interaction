@@ -1,0 +1,41 @@
+tree("Root")
+	fallback
+		sequence
+			IsGoalkeeper
+			tree("Goalkeeper")
+		sequence
+			IsForward
+			tree("Forward")
+		tree("Midfielder")
+
+
+tree("Goalkeeper")
+	fallback
+		sequence
+			IsBallCloserThan 7.0
+			ShootBall
+		sequence
+			IsBallCloserThan 30.0
+			InterceptBall
+		Defend
+	
+
+tree("Forward")
+	fallback
+		sequence
+			IsBallCloserThan 7.0
+			sequence
+				ShootBall
+			Dribble
+		sequence
+			TeammatesHaveBall
+			GoFishing
+		InterceptBall
+
+
+tree("Midfielder")
+	fallback
+		sequence
+			IsBallCloserThan 7.0
+			ShootBall
+		InterceptBall
