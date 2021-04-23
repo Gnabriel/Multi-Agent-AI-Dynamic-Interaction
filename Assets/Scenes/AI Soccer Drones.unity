@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.44657838, g: 0.49641234, b: 0.57481676, a: 1}
+  m_IndirectSpecularColor: {r: 0.44657898, g: 0.4964133, b: 0.5748178, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -250,6 +250,7 @@ MonoBehaviour:
   ball_spawn_point: {fileID: 355222091}
   blue_score: 0
   red_score: 0
+  out_of_bounds: 150
 --- !u!1 &283833300
 GameObject:
   m_ObjectHideFlags: 0
@@ -689,6 +690,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   terrain_manager_game_object: {fileID: 1358011048}
   race_car: {fileID: 1478294031488993887, guid: daca3a4f5a4e04af4be6c10f4b4f78f1,
+    type: 3}
+  race_car_red: {fileID: 1478294031488993887, guid: c5955324297322c4d8e0110f9ae63d64,
     type: 3}
   blue_goal: {fileID: 283833300}
   red_goal: {fileID: 904526769}

@@ -106,7 +106,6 @@ GameObject:
   - component: {fileID: 1478294031488993882}
   - component: {fileID: 1478294031488993884}
   - component: {fileID: 1478294031488993880}
-  - component: {fileID: 8014876455529319980}
   - component: {fileID: 9045083799023390431}
   - component: {fileID: 5186965872562180400}
   m_Layer: 0
@@ -175,29 +174,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 116
   m_CollisionDetection: 0
---- !u!114 &8014876455529319980
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1478294031488993887}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fab9bc8d405024002981541de8018d3e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  terrain_manager_game_object: {fileID: 0}
-  friends: []
-  friend_tag: 
-  enemies: []
-  enemy_tag: 
-  own_goal: {fileID: 0}
-  other_goal: {fileID: 0}
-  ball: {fileID: 0}
-  dist: 0
-  maxKickSpeed: 40
-  lastKickTime: 0
 --- !u!114 &9045083799023390431
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -236,7 +212,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   scripts:
-  - {fileID: 4900000, guid: 1ed246c4f02d56746a054bbf53b4ec37, type: 3}
+  - {fileID: 4900000, guid: 6cf6c52a848e1204c842e695c871d80f, type: 3}
   autoReset: 1
   tickOn: 3
   sourceInfos:

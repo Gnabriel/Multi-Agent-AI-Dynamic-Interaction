@@ -1,41 +1,65 @@
 tree("Root")
+	tree("Attack")
+
+// this is a comment
+tree("Attack")
 	fallback
 		sequence
-			IsGoalkeeper
-			tree("Goalkeeper")
-		sequence
-			IsForward
-			tree("Forward")
-		tree("Midfielder")
-
-
-tree("Goalkeeper")
-	fallback
-		sequence
-			IsBallCloserThan 7.0
-			ShootBall
-		sequence
-			IsBallCloserThan 30.0
-			InterceptBall
-		Defend
-	
-
-tree("Forward")
-	fallback
-		sequence
-			IsBallCloserThan 7.0
+			IsCloserToBallThanEnemy
+			//PrintIfCloserToBallThanEnemy(true)
+			fallback
+				sequence
+					CurrentRobotclosest
+					fallback
+						sequence
+							AngleOnFreeGoal
+							Shoot
+						sequence
+							EnemyArriving
+							Challenge
+						Dribble
+				sequence
+					Backup
+					GoBackup
+				GoSolution
+		//PrintIfCloserToBallThanEnemy(false)
+		fallback
 			sequence
-				ShootBall
-			Dribble
-		sequence
-			TeammatesHaveBall
-			GoFishing
-		InterceptBall
+				IsLastDefender
+				ShadowDefense
+			sequence
+				InOurHalfField
+				fallback
+					sequence
+						CurrentRobotclosest
+						Challenge
+					sequence
+						FrontPost
+						GoFrontPost
+					RotateBackPost
+			
+			fallback
+				sequence
+					CurrentRobotclosest
+					Challenge
+				sequence
+					Backup
+					GoBackup
+				GoSolution
 
+// tree("version1")
+//	fallback
+//		sequence
+//			IsGoalie
+//			Defend 0.3
+//		sequence
+//			IsChaser
+//			tree("Chaser")
+//		Defend 0.7
 
-tree("Midfielder")
-	fallback
-		sequence
-			IsBallCloserThan 7.0
-			ShootBall
-		InterceptBall
+// tree("Chaser")
+//	fallback
+//		sequence
+//			IsBallCloserThan 10.0
+//			Dribble
+//		InterceptBall
