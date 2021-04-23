@@ -13,13 +13,13 @@ public class DroneAISoccer_red : MonoBehaviour
 {
     // ----- Debugging -----
     bool TESTING = true;
-    bool currently_gk;
-    bool currently_fw;
     // ----- /Debugging -----
 
     // ----- Misc -----
-    int goal_resolution = 10;
-    Vector3[] other_goal_positions;
+    public int goal_resolution = 10;
+    public Vector3[] other_goal_positions;
+    public int agent_index;                             // Index of this agent in the friends array.
+    public static int current_goalkeeper;               // The agent_index of the agent that is currently goalkeeper.
     // ----- /Misc -----
 
     private DroneController m_Drone; // the drone controller we want to use
@@ -27,7 +27,7 @@ public class DroneAISoccer_red : MonoBehaviour
     public GameObject terrain_manager_game_object;
     TerrainManager terrain_manager;
 
-    public GameObject[] friends;
+    public static GameObject[] friends;                 // Made this static.
     public string friend_tag;
     public GameObject[] enemies;
     public string enemy_tag;
@@ -69,6 +69,7 @@ public class DroneAISoccer_red : MonoBehaviour
 
         ball = GameObject.FindGameObjectWithTag("Ball");
 
+        agent_index = Array.IndexOf(friends, gameObject);
 
         // ----- Discretize goal -----
         other_goal_positions = new Vector3[goal_resolution + 1];
@@ -167,7 +168,7 @@ public class DroneAISoccer_red : MonoBehaviour
         Vector3 shoot_direction = new Vector3(-999, -999, -999);                                    // Returned to recognize if no shoot direction was found.
         List<float> enemy_intercept_distances = new List<float>();
         float current_closest_enemy = 0;
-        float closest_enemy = 0;
+        float max_closest_enemy = 0;
         RaycastHit hit;
 
         foreach (Vector3 goal_position in other_goal_positions)
@@ -187,10 +188,10 @@ public class DroneAISoccer_red : MonoBehaviour
                 }
                 // Choose the goal direction with maximum distance to the closest enemy.
                 current_closest_enemy = enemy_intercept_distances.Min();
-                if (current_closest_enemy > closest_enemy)
+                if (current_closest_enemy > max_closest_enemy)
                 {
                     shoot_direction = goal_direction;
-                    closest_enemy = current_closest_enemy;
+                    max_closest_enemy = current_closest_enemy;
                 }
             }
         }
@@ -198,6 +199,26 @@ public class DroneAISoccer_red : MonoBehaviour
         //Debug.DrawLine(ball.transform.position, ball.transform.position + shoot_direction, Color.red, 5);
 
         return shoot_direction;
+    }
+
+
+    public float GetKickSpeed(Vector3 goal_direction)
+    {
+        Vector3 ball_velocity = ball.GetComponent<Rigidbody>().velocity;
+        float kick_speed;
+        float min_kick_speed = 20;                          // TODO: Play with this value!
+        float max_kick_speed = maxKickSpeed - 1;            // -1 for error margin in the GetKickVelocity() computations.
+        float max_goal_distance = 185;                      // Distance from opposing corner to goal.
+
+        //float ball_to_goal_relative_speed = Vector3.Project(ball_velocity, goal_direction).magnitude / maxKickSpeed;      // TODO: Take ball's velocity into account!
+        float relative_distance = Math.Min(2 * goal_direction.magnitude / max_goal_distance, 1);
+
+        kick_speed = Math.Max(relative_distance * max_kick_speed, min_kick_speed);
+
+        Debug.Log("Kick speed: " + kick_speed);
+
+        return kick_speed;
+
     }
 
 
@@ -211,6 +232,8 @@ public class DroneAISoccer_red : MonoBehaviour
         //Vector3 orthogonal_vector = ball_velocity - Vector3.Project(ball_velocity, goal_direction);
         Vector3 orthogonal_vector = Vector3.Project(ball_velocity, goal_direction) - ball_velocity;
 
+        float kick_speed = GetKickSpeed(goal_direction);
+
         float x_v = goal_direction.x;
         float z_v = goal_direction.z;
         float x_red = orthogonal_vector.x;
@@ -219,7 +242,7 @@ public class DroneAISoccer_red : MonoBehaviour
         float m = z_v / x_v;
         float a = 1 + m * m;
         float b = x_red + z_red;
-        float c = -(39 * 39 + x_red * x_red + z_red * z_red);
+        float c = -(kick_speed * kick_speed + x_red * x_red + z_red * z_red);
 
         float x_1 = (-b + (float)Math.Sqrt(b * b - 4 * a * c)) / (2 * a);
         float x_2 = (-b - (float)Math.Sqrt(b * b - 4 * a * c)) / (2 * a);
@@ -231,9 +254,6 @@ public class DroneAISoccer_red : MonoBehaviour
 
         Vector3 kick_velocity_1 = orthogonal_vector + new Vector3(x_1, 0, z_1);
         Vector3 kick_velocity_2 = orthogonal_vector + new Vector3(x_2, 0, z_2);
-
-        Debug.Log("v1 dot: " + Vector3.Dot(kick_velocity_1, goal_direction));
-        Debug.Log("v2 dot: " + Vector3.Dot(kick_velocity_2, goal_direction));
 
         if (Vector3.Dot(kick_velocity_1, goal_direction) >= 0)
         {
@@ -256,6 +276,26 @@ public class DroneAISoccer_red : MonoBehaviour
 
         return kick_velocity;
         //return (goal_direction + orthogonal_vector).normalized;
+    }
+
+
+    public GameObject GetOtherForward()
+    {
+        int i = 0;
+        foreach (GameObject friend in friends)
+        {
+            // Skip this agent's own gameobject.
+            if (i != agent_index)
+            {
+                // Check if the friend is not goalkeeper, ie. the other forward.
+                if (current_goalkeeper != i)
+                {
+                    return friend;
+                }
+            }
+            i++;
+        }
+        return gameObject;
     }
 
 
@@ -285,6 +325,20 @@ public class DroneAISoccer_red : MonoBehaviour
     }
 
 
+    public bool CorrectSideOfBall(GameObject agent)
+    {
+        if (friend_tag == "Red" && ball.transform.position.x - agent.transform.position.x < 0)
+        {
+            return true;
+        }
+        else if (friend_tag == "Blue" && ball.transform.position.x - agent.transform.position.x > 0)
+        {
+            return true;
+        }
+        return false;
+    }
+
+
     [Task]
     bool IsGoalkeeper()
     {
@@ -309,18 +363,17 @@ public class DroneAISoccer_red : MonoBehaviour
         //Check if this agent is the best goalkeeper.
         if (my_goalkeeper_score > best_goalkeeper_score)
         {
-            currently_gk = true;            // Used for debugging.
+            current_goalkeeper = agent_index;
             return true;
         }
         else if (my_goalkeeper_score == best_goalkeeper_score)
         {
             if (Array.IndexOf(friends, transform.gameObject) < best_goalkeeper_index)                   // If they are equally suited for goalkeeper, pick first one in friends list.
             {
-                currently_gk = true;        // Used for debugging.
+                current_goalkeeper = agent_index;
                 return true;
             }
         }
-        currently_gk = false;               // Used for debugging.
         return false;
     }
 
@@ -356,10 +409,8 @@ public class DroneAISoccer_red : MonoBehaviour
         // Check if this agent is the best chaser but at the same time not the best goalkeeper.
         if (my_forward_score >= best_forward_score && my_goalkeeper_score <= best_goalkeeper_score)
         {
-            currently_fw = true;            // Used for debugging.
             return true;
         }
-        currently_fw = false;               // Used for debugging.
         return false;
     }
 
@@ -374,6 +425,49 @@ public class DroneAISoccer_red : MonoBehaviour
         }
         return false;
         //return ((ball.transform.position - transform.position).sqrMagnitude < (distance * distance));
+    }
+
+
+    [Task]
+    bool IsOtherForwardCloserThan(float distance)
+    {
+        // Checks if the other forward is within a certain distance to the ball.
+        GameObject other_forward = GetOtherForward();
+        if ((other_forward.transform.position - ball.transform.position).magnitude < distance)
+        {
+            return true;
+        }
+        return false;
+    }
+
+
+    [Task]
+    bool IsReadyToShoot()
+    {
+        // Checks if the agent is ready to shoot, i.e close enough to the ball and at the correct side of the ball.
+        if (IsBallCloserThan(7))
+        {
+            if (CorrectSideOfBall(gameObject))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+    [Task]
+    bool IsOtherForwardReadyToShoot()
+    {
+        // Checks if the other forward is ready to shoot, i.e close enough to the ball and at the correct side of the ball.
+        if (IsOtherForwardCloserThan(7))
+        {
+            if (CorrectSideOfBall(GetOtherForward()))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
 
@@ -395,7 +489,14 @@ public class DroneAISoccer_red : MonoBehaviour
     [Task]
     void Defend()
     {
-        GoToPosition(own_goal.transform.position);
+        if (friend_tag == "Red")
+        {
+            GoToPosition(own_goal.transform.position - new Vector3(10, 0, 0));
+        }
+        else
+        {
+            GoToPosition(own_goal.transform.position + new Vector3(10, 0, 0));
+        }
     }
 
 
@@ -404,7 +505,16 @@ public class DroneAISoccer_red : MonoBehaviour
     {
         //Vector3 target_speed = InterceptTarget(transform.gameObject, ball);
         //Move_with_speed(target_speed);
-        GoToPosition(ball.transform.position);
+        Vector3 target_position = ball.transform.position;
+        if (friend_tag == "Red")
+        {
+            GoToPosition(target_position + new Vector3(3, 0, 0));
+        }
+        else
+        {
+            GoToPosition(target_position - new Vector3(3, 0, 0));
+        }
+        //GoToPosition(ball.transform.position);
     }
 
 
@@ -414,8 +524,7 @@ public class DroneAISoccer_red : MonoBehaviour
         Vector3 shoot_direction = GetShootDirection();
         if (CanKick())
         {
-            KickBall(GetKickVelocity(shoot_direction));                                            // TODO: Change to not always using maxKickSpeed.
-            //KickBall((maxKickSpeed) * goal_direction);                                            // TODO: Change to not always using maxKickSpeed.
+            KickBall(GetKickVelocity(shoot_direction));
             return true;
         }
         return false;
@@ -425,14 +534,7 @@ public class DroneAISoccer_red : MonoBehaviour
     [Task]
     bool ShootBallSynchronised()
     {
-        Vector3 shoot_direction = GetShootDirection();
         return false;
-    }
-
-
-    [Task]
-    void Dribble()
-    {
     }
 
 
@@ -519,17 +621,13 @@ public class DroneAISoccer_red : MonoBehaviour
     {
         if (TESTING)
         {
-            if (currently_gk)
+            if (current_goalkeeper == agent_index)
             {
                 Handles.Label(transform.position, "Goalkeeper");
             }
-            else if (currently_fw)
-            {
-                Handles.Label(transform.position, "Forward");
-            }
             else
             {
-                Handles.Label(transform.position, "Midfielder");
+                Handles.Label(transform.position, "Forward");
             }
 
             //foreach (Vector3 goal_pos in other_goal_positions)

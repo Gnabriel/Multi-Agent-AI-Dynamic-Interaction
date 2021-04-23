@@ -197,8 +197,6 @@ MonoBehaviour:
   dist: 0
   maxKickSpeed: 40
   lastKickTime: 0
-  max_speed: 15
-  max_acceleration: 15
 --- !u!114 &5186965872562180400
 MonoBehaviour:
   m_ObjectHideFlags: 0
