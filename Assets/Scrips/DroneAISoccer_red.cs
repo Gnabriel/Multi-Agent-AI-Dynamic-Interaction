@@ -4,6 +4,7 @@ using UnityEngine;
 using System;
 using Panda;
 using UnityEditor;
+using System.Linq;
 
 
 
@@ -109,7 +110,7 @@ public class DroneAISoccer_red : MonoBehaviour
             Rigidbody rb = ball.GetComponent<Rigidbody>();
             rb.AddForce(velocity, ForceMode.VelocityChange);
             lastKickTime = Time.time;
-            print("ball was kicked ");
+            //print("ball was kicked ");
         }
     }
 
@@ -156,6 +157,105 @@ public class DroneAISoccer_red : MonoBehaviour
             }
         }
         return delta;
+    }
+
+
+    public Vector3 GetShootDirection()                                                                                  // TODO: Add margin to goal post?
+    {
+        // Get the best direction in which the ball should travel in order to score a goal.
+        Vector3 goal_direction;
+        Vector3 shoot_direction = new Vector3(-999, -999, -999);                                    // Returned to recognize if no shoot direction was found.
+        List<float> enemy_intercept_distances = new List<float>();
+        float current_closest_enemy = 0;
+        float closest_enemy = 0;
+        RaycastHit hit;
+
+        foreach (Vector3 goal_position in other_goal_positions)
+        {
+            goal_direction = goal_position - ball.transform.position;                                                   // TODO: Include wall bouncing directions here.
+            
+            Physics.Raycast(ball.transform.position, goal_direction, out hit);
+
+            //if (hit.transform.gameObject.name != "DroneSoccerCapsule(Clone)")
+            if (hit.transform.gameObject.name == "Red_goal" || hit.transform.gameObject.name == "Blue_goal")
+            {
+                // Check distances from each enemy to the goal direction.
+                foreach (GameObject enemy in enemies)
+                {
+                    // Add the length of the projection of ball-to-enemy-vector onto ball-to-goal-vector.
+                    enemy_intercept_distances.Add(Vector3.Project(enemy.transform.position - ball.transform.position, goal_direction).magnitude);
+                }
+                // Choose the goal direction with maximum distance to the closest enemy.
+                current_closest_enemy = enemy_intercept_distances.Min();
+                if (current_closest_enemy > closest_enemy)
+                {
+                    shoot_direction = goal_direction;
+                    closest_enemy = current_closest_enemy;
+                }
+            }
+        }
+
+        //Debug.DrawLine(ball.transform.position, ball.transform.position + shoot_direction, Color.red, 5);
+
+        return shoot_direction;
+    }
+
+
+    public Vector3 GetKickVelocity(Vector3 goal_direction)
+    {
+        // Compensates the kick direction to the ball's current velocity.
+        Vector3 kick_velocity;
+        Vector3 ball_velocity = ball.GetComponent<Rigidbody>().velocity;
+        goal_direction.y = 0;
+        ball_velocity.y = 0;
+        //Vector3 orthogonal_vector = ball_velocity - Vector3.Project(ball_velocity, goal_direction);
+        Vector3 orthogonal_vector = Vector3.Project(ball_velocity, goal_direction) - ball_velocity;
+
+        float x_v = goal_direction.x;
+        float z_v = goal_direction.z;
+        float x_red = orthogonal_vector.x;
+        float z_red = orthogonal_vector.z;
+
+        float m = z_v / x_v;
+        float a = 1 + m * m;
+        float b = x_red + z_red;
+        float c = -(39 * 39 + x_red * x_red + z_red * z_red);
+
+        float x_1 = (-b + (float)Math.Sqrt(b * b - 4 * a * c)) / (2 * a);
+        float x_2 = (-b - (float)Math.Sqrt(b * b - 4 * a * c)) / (2 * a);
+
+        //Debug.DrawLine(ball.transform.position, ball.transform.position + goal_direction*40, Color.magenta, 10);
+
+        float z_1 = m * x_1;
+        float z_2 = m * x_2;
+
+        Vector3 kick_velocity_1 = orthogonal_vector + new Vector3(x_1, 0, z_1);
+        Vector3 kick_velocity_2 = orthogonal_vector + new Vector3(x_2, 0, z_2);
+
+        Debug.Log("v1 dot: " + Vector3.Dot(kick_velocity_1, goal_direction));
+        Debug.Log("v2 dot: " + Vector3.Dot(kick_velocity_2, goal_direction));
+
+        if (Vector3.Dot(kick_velocity_1, goal_direction) >= 0)
+        {
+            kick_velocity = kick_velocity_1;
+        }
+        else
+        {
+            kick_velocity = kick_velocity_2;
+        }
+
+        if (kick_velocity.magnitude > maxKickSpeed)
+        {
+            kick_velocity = kick_velocity.normalized * maxKickSpeed;
+        }
+
+        //Debug.DrawLine(ball.transform.position, ball.transform.position + ball_velocity, Color.green, 10);
+        //Debug.DrawLine(ball.transform.position + ball_velocity, ball.transform.position + ball_velocity + orthogonal_vector, Color.red, 10);
+        //Debug.DrawLine(ball.transform.position, ball.transform.position + new Vector3(x_2, 0, z_2), Color.blue, 10);
+        //Debug.DrawLine(ball.transform.position, ball.transform.position + kick_velocity, Color.black, 10);
+
+        return kick_velocity;
+        //return (goal_direction + orthogonal_vector).normalized;
     }
 
 
@@ -270,7 +370,6 @@ public class DroneAISoccer_red : MonoBehaviour
         // Checks if the ball is closer than a certain distance to the agent.
         if ((transform.position - ball.transform.position).magnitude < distance)
         {
-            Debug.Log("Ball is within kicking distance.");
             return true;
         }
         return false;
@@ -293,23 +392,6 @@ public class DroneAISoccer_red : MonoBehaviour
     }
 
 
-    //[Task]
-    //bool ShootingOpportunity()
-    //{
-    //    // Checks if an agent that already has the ball also has the opportunity to score.
-    //    RaycastHit hit;
-    //    foreach (Vector3 goal_position in other_goal_positions)
-    //    {
-    //        Physics.Raycast(ball.transform.position, goal_position, out hit);
-    //        if (hit.transform.gameObject.tag != "Drone")
-    //        {
-    //            return true;
-    //        }
-    //    }
-    //    return false;
-    //}
-
-
     [Task]
     void Defend()
     {
@@ -329,25 +411,21 @@ public class DroneAISoccer_red : MonoBehaviour
     [Task]
     bool ShootBall()
     {
-        Vector3 goal_direction;
-        RaycastHit hit;
-        foreach (Vector3 goal_position in other_goal_positions)
+        Vector3 shoot_direction = GetShootDirection();
+        if (CanKick())
         {
-            goal_direction = (goal_position - ball.transform.position).normalized;
-            Physics.Raycast(ball.transform.position, goal_direction, out hit);
-
-            //if (hit.transform.gameObject.name == "Red_goal" || hit.transform.gameObject.name == "Blue_goal")
-            if (hit.transform.gameObject.name != "DroneSoccerCapsule(Clone)")
-            {
-                Debug.DrawLine(ball.transform.position, hit.transform.position, Color.green, 1f);
-                if (CanKick())
-                {
-                    KickBall((maxKickSpeed) * goal_direction);                                            // TODO: Change to not always using maxKickSpeed/2.
-                    return true;
-                }
-            }
-            Debug.DrawLine(ball.transform.position, hit.transform.position, Color.red, 1f);
+            KickBall(GetKickVelocity(shoot_direction));                                            // TODO: Change to not always using maxKickSpeed.
+            //KickBall((maxKickSpeed) * goal_direction);                                            // TODO: Change to not always using maxKickSpeed.
+            return true;
         }
+        return false;
+    }
+
+
+    [Task]
+    bool ShootBallSynchronised()
+    {
+        Vector3 shoot_direction = GetShootDirection();
         return false;
     }
 
