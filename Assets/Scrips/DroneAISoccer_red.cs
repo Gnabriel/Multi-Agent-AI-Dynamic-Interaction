@@ -180,40 +180,72 @@ public class DroneAISoccer_red : MonoBehaviour
     {
         // Get the best direction in which the ball should travel in order to score a goal.
         Vector3 goal_direction;
-        Vector3 shoot_direction = new Vector3(-999, -999, -999);                                    // Returned to recognize if no shoot direction was found.
+        Vector3 wall_direction;
+        Vector3 bounce_direction;
+        Vector3[] shoot_directions = new Vector3[2];
+        Vector3 best_shoot_direction = new Vector3(-999, -999, -999);                                                   // Returned to recognize if no shoot direction was found.
         List<float> enemy_intercept_distances = new List<float>();
         float current_closest_enemy = 0;
         float max_closest_enemy = 0;
-        RaycastHit hit;
+        RaycastHit goal_hit;
+        RaycastHit wall_hit;
+        RaycastHit bounce_hit;
 
         foreach (Vector3 goal_position in other_goal_positions)
         {
-            goal_direction = goal_position - ball.transform.position;                                                   // TODO: Include wall bouncing directions here.
-            
-            Physics.Raycast(ball.transform.position, goal_direction, out hit);
+            // Aiming directly at goal.
+            goal_direction = goal_position - ball.transform.position;
+            Physics.Raycast(ball.transform.position, goal_direction, out goal_hit);
+            if ((goal_hit.transform.gameObject.name == "Red_goal" && friend_tag == "Red") || (goal_hit.transform.gameObject.name == "Blue_goal" && friend_tag == "Blue"))
+            {
+                shoot_directions[0] = goal_direction;
+            }
 
-            //if (hit.transform.gameObject.name != "DroneSoccerCapsule(Clone)")
-            if (hit.transform.gameObject.name == "Red_goal" || hit.transform.gameObject.name == "Blue_goal")
+            // Wall bouncing shot.
+            if (UpperHalfOfField(ball.transform.position))
+            {
+                wall_direction = (goal_position - new Vector3(0, 0, 100)) - ball.transform.position;
+            }
+            else
+            {
+                wall_direction = (goal_position + new Vector3(0, 0, 100)) - ball.transform.position;
+            }
+            Physics.Raycast(ball.transform.position, wall_direction, out wall_hit);
+            if (wall_hit.transform.gameObject.name == "Cube")
+            {
+                Vector3 wall_hit_position = wall_hit.point;
+                bounce_direction = Vector3.Reflect(wall_direction, wall_hit.normal);
+                Physics.Raycast(wall_hit_position, bounce_direction, out bounce_hit);
+
+                if ((wall_hit.transform.gameObject.name == "Red_goal" && friend_tag == "Red") || (wall_hit.transform.gameObject.name == "Blue_goal" && friend_tag == "Blue"))
+                {
+                    shoot_directions[1] = wall_direction;
+                }
+            }
+            // ##################################################################################################################################################################
+            // #########################################################################################################################################################
+            foreach (Vector3 shoot_direction in shoot_directions)   // TODO: RIGHT NOW IT ONLY CHECKS FOR ENEMIES CLOSE TO THE wall_direction vector and not bounce_direction #########
             {
                 // Check distances from each enemy to the goal direction.
                 foreach (GameObject enemy in enemies)
                 {
                     // Add the length of the projection of ball-to-enemy-vector onto ball-to-goal-vector.
-                    enemy_intercept_distances.Add(Vector3.Project(enemy.transform.position - ball.transform.position, goal_direction).magnitude);
+                    enemy_intercept_distances.Add(Vector3.Project(enemy.transform.position - ball.transform.position, shoot_direction).magnitude);
                 }
                 // Choose the goal direction with maximum distance to the closest enemy.
                 current_closest_enemy = enemy_intercept_distances.Min();
                 if (current_closest_enemy > max_closest_enemy)
                 {
-                    shoot_direction = goal_direction;
+                    best_shoot_direction = shoot_direction;
                     max_closest_enemy = current_closest_enemy;
                 }
             }
+            shoot_directions = new Vector3[2];
         }
 
-        //Debug.DrawLine(ball.transform.position, ball.transform.position + shoot_direction, Color.red, 5);
+        Debug.DrawLine(ball.transform.position, ball.transform.position + best_shoot_direction, Color.red, 5);
 
-        return shoot_direction;
+        return best_shoot_direction;
     }
 
 
@@ -355,6 +387,17 @@ public class DroneAISoccer_red : MonoBehaviour
         Vector3 acceleration = speed - my_rigidbody.velocity;
 
         m_Drone.Move_vect(acceleration);
+    }
+
+
+    public bool UpperHalfOfField(Vector3 position)
+    {
+        // Checks if a position is above the horisontal center of the field or not.
+        if (position.z < 100)
+        {
+            return true;
+        }
+        return false;
     }
 
 
@@ -572,13 +615,6 @@ public class DroneAISoccer_red : MonoBehaviour
             KickBall(GetKickVelocity(shoot_direction));
             return true;
         }
-        return false;
-    }
-
-
-    [Task]
-    bool ShootBallSynchronised()
-    {
         return false;
     }
 
