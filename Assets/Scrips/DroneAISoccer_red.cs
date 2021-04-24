@@ -16,11 +16,19 @@ public class DroneAISoccer_red : MonoBehaviour
     // ----- /Debugging -----
 
     // ----- Misc -----
-    public int goal_resolution = 10;
+    public int goal_resolution = 20;
     public Vector3[] other_goal_positions;
     public int agent_index;                             // Index of this agent in the friends array.
     public static int current_goalkeeper;               // The agent_index of the agent that is currently goalkeeper.
+    Rect field;
     // ----- /Misc -----
+
+    // ----- PD controller -----
+    public Vector3 old_target_pos;
+    Rigidbody my_rigidbody;
+    public float k_p = 2f;
+    public float k_d = 1f;
+    // ----- /PD controller -----
 
     private DroneController m_Drone; // the drone controller we want to use
 
@@ -47,7 +55,9 @@ public class DroneAISoccer_red : MonoBehaviour
 
     private void Start()
     {
+        my_rigidbody = GetComponent<Rigidbody>();
         myPandaBT = GetComponent<PandaBehaviour>();
+        field = Rect.MinMaxRect(55f, 52.5f, 245f, 147.5f);
 
         //myPandaBT.Compile("SoccerRed.BT.txt");
 
@@ -118,8 +128,13 @@ public class DroneAISoccer_red : MonoBehaviour
 
     public void GoToPosition(Vector3 target_position)
     {
-        // Moves agent toward desired position.
-        m_Drone.Move_vect(target_position - transform.position);
+        // Moves agent toward desired position with the help of Petter's PD controller.
+        Vector3 target_velocity = (target_position - old_target_pos) / Time.fixedDeltaTime;
+        old_target_pos = target_position;
+        Vector3 position_error = target_position - transform.position;
+        Vector3 velocity_error = target_velocity - my_rigidbody.velocity;
+        Vector3 desired_acceleration = k_p * position_error + k_d * velocity_error;
+        m_Drone.Move_vect(desired_acceleration);
     }
 
 
@@ -210,10 +225,29 @@ public class DroneAISoccer_red : MonoBehaviour
         float max_kick_speed = maxKickSpeed - 1;            // -1 for error margin in the GetKickVelocity() computations.
         float max_goal_distance = 185;                      // Distance from opposing corner to goal.
 
-        //float ball_to_goal_relative_speed = Vector3.Project(ball_velocity, goal_direction).magnitude / maxKickSpeed;      // TODO: Take ball's velocity into account!
-        float relative_distance = Math.Min(2 * goal_direction.magnitude / max_goal_distance, 1);
+        //float distance_factor = Math.Min(2 * goal_direction.magnitude / max_goal_distance, 1);
+        float distance_factor = Math.Min(goal_direction.magnitude / max_goal_distance, 1);                  // Factor from 0->1 on how much force should be added.
 
-        kick_speed = Math.Max(relative_distance * max_kick_speed, min_kick_speed);
+        Vector3 ball_velocity_to_goal = Vector3.Project(ball_velocity, goal_direction);
+
+        // Check direction of ball_velocity_to_goal relative to goal_direction.
+        float velocity_factor;
+        if (Vector3.Dot(goal_direction, ball_velocity_to_goal) < 0)                                         // If ball_velocity_to_goal is at opposite direction from goal_direction.
+        {
+            velocity_factor = Math.Min(ball_velocity_to_goal.magnitude, maxKickSpeed) / maxKickSpeed;       // Factor from 0->1 on how much force should be added.
+        }
+        else                                                                                                // If ball_velocity_to_goal is at same direction as goal_direction.
+        {
+            velocity_factor = -Math.Min(ball_velocity_to_goal.magnitude, maxKickSpeed) / maxKickSpeed;      // Factor from -1->0 on how much force should be reduced.
+        }
+
+        // ############################# (distance_factor + velocity_factor) kan bli negativt....... gör om till faktorer istället och multiplicera dem?
+
+        //kick_speed = (distance_factor + velocity_factor) * max_kick_speed;
+
+        kick_speed = Math.Max(distance_factor * max_kick_speed, min_kick_speed);
+
+        kick_speed = max_kick_speed;
 
         Debug.Log("Kick speed: " + kick_speed);
 
@@ -318,7 +352,6 @@ public class DroneAISoccer_red : MonoBehaviour
 
     void Move_with_speed(Vector3 speed)
     {
-        Rigidbody my_rigidbody = GetComponent<Rigidbody>();
         Vector3 acceleration = speed - my_rigidbody.velocity;
 
         m_Drone.Move_vect(acceleration);
@@ -416,6 +449,19 @@ public class DroneAISoccer_red : MonoBehaviour
 
 
     [Task]
+    bool IsBallOutOfBounds()
+    {
+        // Checks if the ball is outside of the soccer field.
+        if (field.Contains(new Vector2(ball.transform.position.x, ball.transform.position.z)))
+        {
+            return false;
+        }
+        Debug.Log("Ball is out of bounds!");
+        return true;
+    }
+
+
+    [Task]
     bool IsBallCloserThan(float distance)
     {
         // Checks if the ball is closer than a certain distance to the agent.
@@ -505,14 +551,13 @@ public class DroneAISoccer_red : MonoBehaviour
     {
         //Vector3 target_speed = InterceptTarget(transform.gameObject, ball);
         //Move_with_speed(target_speed);
-        Vector3 target_position = ball.transform.position;
         if (friend_tag == "Red")
         {
-            GoToPosition(target_position + new Vector3(3, 0, 0));
+            GoToPosition(ball.transform.position + new Vector3(3, 0, 0));
         }
         else
         {
-            GoToPosition(target_position - new Vector3(3, 0, 0));
+            GoToPosition(ball.transform.position - new Vector3(3, 0, 0));
         }
         //GoToPosition(ball.transform.position);
     }
@@ -542,8 +587,15 @@ public class DroneAISoccer_red : MonoBehaviour
     void GoCenter()
     {
         // Moves this agent toward the center of the field lengtwise.
-        Vector3 center = Vector3.Lerp(own_goal.transform.position, other_goal.transform.position, 0.5f);        // TODO: does this return the center point correctly?
-        GoToPosition(center);                                                                   // TODO: Change this to add margin and/or make it dynamic somehow.
+        Vector3 center = Vector3.Lerp(own_goal.transform.position, other_goal.transform.position, 0.5f);
+        if (friend_tag == "Red")
+        {
+            GoToPosition(center + new Vector3(3, 0, 0));
+        }
+        else
+        {
+            GoToPosition(center + new Vector3(3, 0, 0));
+        }
     }
 
 
@@ -551,7 +603,7 @@ public class DroneAISoccer_red : MonoBehaviour
     void GoFishing()
     {
         // Moves this agent toward the opposing team's goal.
-        GoToPosition(other_goal.transform.position);                                            // TODO: Change this to add margin and/or make it dynamic somehow.
+        GoToPosition(other_goal.transform.position);
     }
 
 

@@ -12,7 +12,7 @@ tree("Goalkeeper")
 			IsBallCloserThan 7.0
 			ShootBall
 		sequence
-			IsBallCloserThan 40.0
+			IsBallCloserThan 20.0
 			InterceptBall
 		Defend
 
@@ -20,9 +20,13 @@ tree("Goalkeeper")
 tree("Forward")
 	fallback
 		sequence
+			IsBallOutOfBounds
+			GoCenter
+		sequence
 			IsReadyToShoot
 			sequence
 				IsOtherForwardCloserThan 15.0
 				IsOtherForwardReadyToShoot
+				ShootBall
 			ShootBall
 		InterceptBall
