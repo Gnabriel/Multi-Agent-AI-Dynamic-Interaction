@@ -15,7 +15,7 @@ public class DroneAI : MonoBehaviour
     public static float desired_speed = 50f;          // TODO: Set speed.                 // Desired constant speed of the agents.
     public static float sensor_length = 15f;           // TODO: Play with value.           // Length of the obstacle detecting sensors around an agent.
     public static int sensor_resolution = 30;          // TODO: Play with value.           // Angle resolution in degrees of the obstacle detecting sensors around an agent.
-    public static float vo_length = 900f;
+    public static float vo_length = 100f;
     public Map map;
     private const float grid_size = 1f;
     List<Vector3> my_path;
@@ -24,6 +24,8 @@ public class DroneAI : MonoBehaviour
     public List<Vector3> obstacles;
     public static float drone_radius = 2.5f;
     public int index;
+    Vector3 old_acceleration;
+    int call;
     // ----- /Misc -----
 
     // ----- Unity objects -----
@@ -52,7 +54,8 @@ public class DroneAI : MonoBehaviour
         }
         map = new Map(terrain_manager, grid_size);
         my_path = A_star(transform.position, my_goal_object.transform.position);
-        
+        call = index;
+        old_acceleration = new Vector3(0.0f, 0.0f, 0.0f);
         // Vector3 old_wp = transform.position;
         // foreach (var wp in my_path)
         // {
@@ -65,11 +68,22 @@ public class DroneAI : MonoBehaviour
     private void FixedUpdate()
     {
         (agents, obstacles) = AgentObstacleSensor();
+        agents.Remove(gameObject);
 
         // Execute your path here
         Vector3 destination = my_path[0];
 
         Vector3 relVect = destination - transform.position;
+        if (my_path.Count == 1 & relVect.magnitude < 3) {
+            ENABLE_DEBUG = false;            
+            return;
+        }
+        if (my_path.Count == 1 & relVect.magnitude < 16) {
+            Vector3 acceleration_goal = relVect - my_rigidbody.velocity;
+            m_Drone.Move_vect(acceleration_goal);
+            return;
+        }
+
 
         if (relVect.magnitude < 25 & my_path.Count != 1) {
             RaycastHit info;
@@ -81,33 +95,36 @@ public class DroneAI : MonoBehaviour
                 destination = my_path[0];
             }
         }
-        Vector3 new_vel = CollisionAvoidance(agents, obstacles, destination);
-        //Vector3 new_vel = new Vector3(0, 0, 0);
-        new_vel.y = 0.0f;
-
+        call = call + 1;
         Vector3 acceleration;
+        if (call % 5 == 0) {
+            Vector3 new_vel = CollisionAvoidance(agents, obstacles, destination);
+            //Vector3 new_vel = new Vector3(0, 0, 0);
+            new_vel.y = 0.0f;
 
-        if (Double.IsNaN((double)new_vel.x) | Double.IsNaN((double)new_vel.z)) {
-            acceleration = new Vector3(1, 0, 0);
-            new_vel = acceleration;
-        } else {
-            acceleration = new_vel - my_rigidbody.velocity;
-        }
-
-        
-        if (index == 0) {
-            Debug.Log("Acceleration = " + acceleration);
-        }
-        if (ENABLE_DEBUG)
-        {
-            if (gameObject == agents[agents.Count - 1]) {
-                // Debug.Log("one round done" + new_vel);
+            if (Double.IsNaN((double)new_vel.x)) {
+                acceleration = new Vector3(0, 0, 1);
+                new_vel = acceleration;
+            } else if (Double.IsNaN((double)new_vel.z)) {
+                acceleration = new Vector3(1, 0, 0);
+                new_vel = acceleration;
+            } else {
+                acceleration = new_vel - my_rigidbody.velocity;
             }
-            Debug.DrawLine(this.transform.position, this.transform.position + new_vel, Color.red, 0.2f);
-            
-            Debug.DrawLine(this.transform.position, this.transform.position + acceleration, Color.blue, 0.2f);
-        }
 
+            old_acceleration = acceleration;
+            if (index == 0) {
+                Debug.Log("Acceleration = " + acceleration);
+            }
+            if (ENABLE_DEBUG)
+            {
+                Debug.DrawLine(this.transform.position, this.transform.position + new_vel, Color.red, 0.2f);
+                
+                Debug.DrawLine(this.transform.position, this.transform.position + acceleration, Color.blue, 0.2f);
+            }
+        } else {
+            acceleration = old_acceleration;
+        }
         m_Drone.Move_vect(acceleration);
     }
 
@@ -162,13 +179,15 @@ public class DroneAI : MonoBehaviour
             agent_i_vo_list.Add(vo);                                                                            // Save the VO*_Ai|Oj in a list for this agent_i. 
         }
 
-        if (index == 0) {
+        // if (index == 0) {
+        if (ENABLE_DEBUG) {
             foreach (VO v in agent_i_hrvo_list) {
                 // Debug.DrawLine(transform.position, v.origin,Color.magenta, 0.1f);
                 Debug.DrawLine(v.origin, v.origin + new Vector3((float)Math.Cos(v.left_boundary),0.0f,(float)Math.Sin(v.left_boundary)) * 10.0f,Color.magenta, 0.1f);
                 Debug.DrawLine(v.origin, v.origin + new Vector3((float)Math.Cos(v.right_boundary),0.0f,(float)Math.Sin(v.right_boundary)) * 10.0f,Color.magenta, 0.1f);
             }
-        }
+        }  
+        // }
 
         CollisionAvoidancecalls = CollisionAvoidancecalls + 1;
         agent_i_v_pref = GetPreferredVelocity(destination);                                                                // Get the preferred velocity if no other agents would exist.
@@ -197,6 +216,9 @@ public class DroneAI : MonoBehaviour
 
         float angle_from_j_to_i= (float) Math.Atan2(agent_j_pos.z - agent_i_pos.z, agent_j_pos.x - agent_i_pos.x);
 
+        if ( 2 * drone_radius > distance){
+            distance = 2 * drone_radius;
+        }
         float cone_angle = (float) Math.Asin((2 * drone_radius) / distance);
 
         float left_boundary = angle_from_j_to_i + cone_angle; // maybe over 2
@@ -228,6 +250,10 @@ public class DroneAI : MonoBehaviour
 
         float angle_from_j_to_i= (float) Math.Atan2(agent_j_pos.z - agent_i_pos.z, agent_j_pos.x - agent_i_pos.x);
 
+        if ( 2 * drone_radius > distance){
+            distance = 2 * drone_radius;
+        }
+
         float cone_angle = (float) Math.Asin((2 * drone_radius) / distance);
 
         float left_boundary = angle_from_j_to_i + cone_angle;
@@ -238,7 +264,8 @@ public class DroneAI : MonoBehaviour
     }
 
     VO HybridReciprocalVelocityObstacle(Vector3 agent_i_v, VO vito, RVO rvito) {
-        float velocity_angle = (float) Math.Atan2(agent_i_v.z - rvito.origin.z, agent_i_v.x - rvito.origin.x); 
+        float velocity_angle = (float) Math.Atan2(agent_i_v.z - rvito.origin.z, agent_i_v.x - rvito.origin.x);
+        
         Vector3 new_origin;
         if (velocity_angle > rvito.center_line) {
             //left
@@ -255,7 +282,9 @@ public class DroneAI : MonoBehaviour
             float x = (b_2 - b) / (m - m_2);
             float z = m*x + b;
 
-            new_origin = new Vector3(x, 0.0f, z);
+            new_origin = intersection(m, b, m_2, b_2);
+
+            new_origin = new_origin + (new_origin - rvito.origin);
         } else {
             //right
             Vector3 other_point = new Vector3( (float) Math.Cos(rvito.right_boundary), 0.0f, (float) Math.Sin(rvito.right_boundary));
@@ -268,12 +297,15 @@ public class DroneAI : MonoBehaviour
             float m_2 = other_point_2.z / other_point_2.x;
             float b_2 = vito.origin.z - m_2 * vito.origin.x;
 
-            float x = (b_2 - b) / (m - m_2);
-            float z = m*x + b;
-
-            new_origin = new Vector3(x, 0.0f, z);
+            new_origin = intersection(m, b, m_2, b_2);
+            new_origin = new_origin + (new_origin - rvito.origin);
         }
-
+        if (Double.IsNaN((double)new_origin.x) | Double.IsNaN((double)new_origin.z)) {
+            Debug.Log("Found it in HRVO");
+            
+            // Debug.Log(agent_i_pos + " " + agent_i_v);
+            // Debug.Log(cone_angle + " " + angle_from_j_to_i);
+        }
         return new VO(rvito.distance, rvito.left_boundary, rvito.right_boundary, new_origin);
     }
 
@@ -412,6 +444,9 @@ public class DroneAI : MonoBehaviour
 
         List<Vector3> sorted_velocities = permissible_new_velocities.OrderBy(v => v.magnitude).ToList();
         sorted_velocities.Insert(0, v_pref);
+        // sorted_velocities.Insert(0, v_pref / 2);
+        // sorted_velocities.Insert(0, v_pref * 2);
+        // sorted_velocities.Insert(0, v_pref * 3);
         int i = 0;
         //Debug.Log(hrvo_list.Count + "    " + vo_list.Count + "    " + sorted_velocities.Count);
         if (index == 0) {
@@ -430,11 +465,16 @@ public class DroneAI : MonoBehaviour
             if (index == 0) {
                 Debug.DrawLine(transform.position, v + v_pref + transform.position,Color.white);
             }
-            if (i == 50 & index != 0) {
-                v_new = v + v_pref;
-                break;
-            }
+            // if (i == 13 & index != 0) {
+            //     if (index % 2 == 0) {
+            //         v_new = new Vector3(v_pref.z, 0.0f, - v_pref.x);
+            //     } else {
+            //         v_new = v_pref;
+            //     }
+            //     break;
+            // }
         }
+        
         if (index == 0) {
             Debug.Log(CollisionAvoidancecalls + " - Number of calls to contained_in_vo vs times it returns sucess " + calls + " " + success);
         }
@@ -544,6 +584,7 @@ public class DroneAI : MonoBehaviour
     public (float, float) linefromangle(Vector3 point, float angle) {
         float m = (float) (Math.Sin(angle) / Math.Cos(angle));
         float b = point.z - m * point.x;
+
         return (m,b);
     }
 
