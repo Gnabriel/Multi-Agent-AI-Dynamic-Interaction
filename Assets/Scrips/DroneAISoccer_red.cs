@@ -187,7 +187,7 @@ public class DroneAISoccer_red : MonoBehaviour
     public float ShootDirectionScore(List<GameObject> enemies_in_front, Vector3 shoot_direction, Vector3 bounce_direction, Vector3 wall_hit_position)
     {
         // Computes score of a shooting direction.
-        float score;
+        float score = 0;
         List<float> enemy_intercept_distances = new List<float>();
         float current_closest_enemy = 0;
         float max_closest_enemy = 0;
@@ -221,10 +221,11 @@ public class DroneAISoccer_red : MonoBehaviour
         current_closest_enemy = enemy_intercept_distances.Min();
         if (current_closest_enemy > max_closest_enemy)
         {
-            best_shoot_direction = shoot_direction;             // Normalizea på något sätt för att returnera score (????????) ###########################################################
+            //best_shoot_direction = shoot_direction;             // Normalizea på något sätt för att returnera score (????????) ###########################################################
             max_closest_enemy = current_closest_enemy;
         }
-        
+
+        return score;
     }
 
 
@@ -232,7 +233,7 @@ public class DroneAISoccer_red : MonoBehaviour
     {
         // Get the best direction in which the ball should travel in order to score a goal.
         int enemies_behind = 0;
-        List<GameObject> enemies_in_front = new List<GameObject>;
+        List<GameObject> enemies_in_front = new List<GameObject>();
         Vector3 goal_direction;
         Vector3 wall_direction;
         Vector3 bounce_direction;
