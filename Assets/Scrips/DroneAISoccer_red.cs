@@ -176,89 +176,20 @@ public class DroneAISoccer_red : MonoBehaviour
     }
 
 
-    public float ShootDirectionScore(List<GameObject> enemies_in_front, Vector3 shoot_direction)
-    {
-        // Computes score of a shooting direction of a shot going straight to goal.
-        Vector3 null_vector = new Vector3(-999, -999, -999);
-        return ShootDirectionScore(enemies_in_front, shoot_direction, null_vector, null_vector);
-    }
-
-
-    public float ShootDirectionScore(List<GameObject> enemies_in_front, Vector3 shoot_direction, Vector3 bounce_direction, Vector3 wall_hit_position)
-    {
-        // Computes score of a shooting direction.
-        float score = 0;
-        List<float> enemy_intercept_distances = new List<float>();
-        float current_closest_enemy = 0;
-        float max_closest_enemy = 0;
-        Vector3 null_vector = new Vector3(-999, -999, -999);
-        foreach (GameObject enemy in enemies_in_front)
-        {
-            // Shot going straight to goal.
-            if (bounce_direction == null_vector && wall_hit_position == null_vector)
-            {
-                // Add the length of the projection of ball-to-enemy-vector onto shoot_direction-vector.
-                enemy_intercept_distances.Add(Vector3.Project(enemy.transform.position - ball.transform.position, shoot_direction).magnitude);
-            }
-            // Wall bouncing shot.
-            else
-            {
-                // Check if the enemy is relevant to the shoot_direction vector or the bounce_direction vector.
-                if ((friend_tag == "Red" && enemy.transform.position.x > wall_hit_position.x) || (friend_tag == "Blue" && enemy.transform.position.x < wall_hit_position.x))
-                {
-                    // Add the length of the projection of ball-to-enemy-vector onto shoot_direction-vector.
-                    enemy_intercept_distances.Add(Vector3.Project(enemy.transform.position - ball.transform.position, shoot_direction).magnitude);
-                }
-                else
-                {
-                    // Add the length of the projection of wall-to-enemy-vector onto bounce_direction-vector.
-                    enemy_intercept_distances.Add(Vector3.Project(enemy.transform.position - wall_hit_position, bounce_direction).magnitude);
-                }
-            }
-        }
-
-        // Choose the goal direction with maximum distance to the closest enemy.
-        current_closest_enemy = enemy_intercept_distances.Min();
-        if (current_closest_enemy > max_closest_enemy)
-        {
-            //best_shoot_direction = shoot_direction;             // Normalizea på något sätt för att returnera score (????????) ###########################################################
-            max_closest_enemy = current_closest_enemy;
-        }
-
-        return score;
-    }
-
-
     public Vector3 GetShootDirection()                                                                                  // TODO: Add margin to goal post?
     {
         // Get the best direction in which the ball should travel in order to score a goal.
-        int enemies_behind = 0;
-        List<GameObject> enemies_in_front = new List<GameObject>();
         Vector3 goal_direction;
         Vector3 wall_direction;
         Vector3 bounce_direction;
         Vector3[] shoot_directions = new Vector3[2];
         Vector3 best_shoot_direction = new Vector3(-999, -999, -999);                                                   // Returned to recognize if no shoot direction was found.
+        List<float> enemy_intercept_distances = new List<float>();
+        float current_closest_enemy = 0;
+        float max_closest_enemy = 0;
         RaycastHit goal_hit;
         RaycastHit wall_hit;
         RaycastHit bounce_hit;
-
-        foreach (GameObject enemy in enemies)
-        {
-            // Check enemies that are in behind the ball and thus cannot intercept the shot.
-            if ((friend_tag == "Red" && enemy.transform.position.x < ball.transform.position.x) || (friend_tag == "Red" && enemy.transform.position.x > ball.transform.position.x))
-            {
-                enemies_behind++;
-            }
-            else
-            {
-                enemies_in_front.Add(enemy);
-            }
-        }
-        if (enemies_behind >= 3)                                                                                        // If all enemies are behind the ball.
-        {
-            return other_goal_positions[(int)other_goal_positions.Length / 2];                                          // Shoot towards the middle of the goal.
-        }
 
         foreach (Vector3 goal_position in other_goal_positions)
         {
