@@ -12,7 +12,7 @@ using System.Linq;
 public class DroneAISoccer_red : MonoBehaviour
 {
     // ----- Debugging -----
-    bool TESTING = true;
+    bool TESTING = false;
     // ----- /Debugging -----
 
     // ----- Misc -----
@@ -182,6 +182,7 @@ public class DroneAISoccer_red : MonoBehaviour
         Vector3 goal_direction;
         Vector3 wall_direction;
         Vector3 bounce_direction;
+        Vector3 enemy_direction;
         Vector3[] shoot_directions = new Vector3[2];
         Vector3 best_shoot_direction = new Vector3(-999, -999, -999);                                                   // Returned to recognize if no shoot direction was found.
         List<float> enemy_intercept_distances = new List<float>();
@@ -230,7 +231,8 @@ public class DroneAISoccer_red : MonoBehaviour
                 foreach (GameObject enemy in enemies)
                 {
                     // Add the length of the projection of ball-to-enemy-vector onto ball-to-goal-vector.
-                    enemy_intercept_distances.Add(Vector3.Project(enemy.transform.position - ball.transform.position, shoot_direction).magnitude);
+                    enemy_direction = enemy.transform.position - ball.transform.position;
+                    enemy_intercept_distances.Add(Vector3.Project(enemy_direction, shoot_direction) - enemy_direction.magnitude);
                 }
                 // Choose the goal direction with maximum distance to the closest enemy.
                 current_closest_enemy = enemy_intercept_distances.Min();
@@ -243,7 +245,7 @@ public class DroneAISoccer_red : MonoBehaviour
             shoot_directions = new Vector3[2];
         }
 
-        Debug.DrawLine(ball.transform.position, ball.transform.position + best_shoot_direction, Color.red, 5);
+        //Debug.DrawLine(ball.transform.position, ball.transform.position + best_shoot_direction, Color.red, 5);
 
         return best_shoot_direction;
     }
